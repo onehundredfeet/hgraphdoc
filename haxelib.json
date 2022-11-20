@@ -1,0 +1,13 @@
+{
+  "name": "hgraphdoc",
+  "url" : "https://github.com/onehundredfeet/hgraphdoc",
+  "license": "MIT",
+  "tags": [ "graph", "json", "xml", "ai" ],
+  "description": "Generic graph data structure for AI",
+  "version": "0.1.0",
+  "classPath": "source/",
+  "releasenote": "",
+  "contributors": [ "onehundredfeet" ],
+  "dependencies": {  "tink-core" : "", "haxe-strings" : "" }
+
+}

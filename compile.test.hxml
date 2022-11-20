@@ -1,1 +1,5 @@
-
+--library tink_core
+--library haxe-strings
+--class-path source
+--main test.Main
+-hl bin/test.hl
