@@ -3,7 +3,6 @@ package gdoc;
 import sys.io.File;
 import haxe.Json;
 import tink.core.Pair;
-import gdoc.Visio;
 import gdoc.VisioXMLTools;
 import gdoc.VisioXMLGraphModel;
 import gdoc.NodeDoc;
@@ -39,8 +38,69 @@ class VisioImport {
         }
         return dynmap;
     }
+
+    static function parseMachine( page : Xml ) {
+        var shapes = getAllShapes(page);
+
+        for(s in shapes) {
+            //trace ("s: " + s.nodeName);
+        }
+        var sm = new VisioXMLGraphModel(
+            page.get("NameU"),
+            shapes,
+            shapes.filter(isStateShape),
+            getAllConnections(page),
+            shapes.filter(isTransitionShape)
+        );
+
+
+
+        /*
+        _name = page.GetAttribute("NameU");
+        var _settings = Import.GetSettings(page);
+        _shapes = Import.GetAllShapes(page);
+        _stateShapes = Import.SelectStateShapes(_shapes);
+        _connections = Import.GetConnections(page);
+        _transitions = Import.SelectTransitionShapes(_shapes);
+
+        _graph = Import.BuildGraph(_shapes, _connections);
+
+        _defaultState = _stateShapes.FirstOrDefault(x => x.HasProp("default")).GetStateShapeName();
+        if (_defaultState == null) {
+            _defaultState = "DEFAULT";
+        }
+
+        if (_settings != null) {
+            Reactive = _settings.HasProp("reactive");
+            ReEntrant = _settings.HasProp("reentrant");
+        }
+
+        _stateNames = _stateShapes.Select(Import.GetStateShapeName).Where(x => x != null).Select(ParseUtil.ScrubLabel).Distinct().ToArray();
+        _transitionNames = _transitions.Select(Import.GetTransitionShapeName).Where(x => x != null).Select(ParseUtil.ScrubLabel).Distinct().ToArray();
+    }
+        */
+        return sm;
+    }
+
+    static function getPages(root : Xml) : Array<Xml>{
+        return getChildrenOf( root, "Pages");
+    }
+    static function read( path ) {
+        var contents = sys.io.File.getContent(path);
+        var root = Xml.parse(contents).firstElement();
+
+        var machines = [];
+
+        for( p in getPages( root )) {
+            machines.push(parseMachine( p ));
+        }
+
+        return machines;
+    }
+
+
 	public static function loadAsGraphDoc( filepath : String ) : NodeDoc {
-		var smArray = Visio.read(filepath);
+		var smArray = read(filepath);
 
 		var pages = [];
 
@@ -51,7 +111,6 @@ class VisioImport {
                 name : m.name,
                 nodes : nodes
             };
-			trace('Found model ${m.name}');
 
             var stateIDs = new haxe.ds.StringMap<Int>();
             var stateIDCount = 0;
@@ -69,7 +128,7 @@ class VisioImport {
 				}
                 
 				var node : DocNode = {
-                    name : getRawStateShapeName(s),
+                    name : getStateShapeName(s),
                     id : stateIDs.get(getPath(s)),
                     properties: asDynMap(getPropertyMap(s))
                 };

@@ -1,9 +1,5 @@
 package gdoc;
 
-import sys.io.File;
-import haxe.Json;
-
-
 typedef DocNodeConnection = {
     name : String,
     target : String,
@@ -26,6 +22,3 @@ typedef NodeDocPage = {
 
 typedef NodeDoc = Array<NodeDocPage>;
 
-function loadNodeDoc( path : String ) : NodeDoc {
-    return Json.parse(File.getContent(path));
-}

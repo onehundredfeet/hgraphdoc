@@ -1,7 +1,7 @@
 package gdoc;
 
 import haxe.ds.StringMap;
-
+using Lambda;
 
 class NodeGraphArc {
     public function new() {
@@ -29,7 +29,15 @@ class NodeGraphNode {
         return outgoing.filter((x)->x.name == relation).map((x)->x.target);
     }
 
+    public function getConnectedByNot(relation: String) : Array<NodeGraphNode> {
+        return outgoing.filter((x)->x.name != relation).map((x)->x.target);
+    }
+
     public function getChildren() return getConnectedBy("_CHILD");
+    public function getNonChildren() return getConnectedByNot("_CHILD");
+    public function hasChild(name:String) return outgoing.find((x) -> x.target.name == name) != null;
+    public function numChildren() return outgoing.count((x)-> x.name == "_CHILD" );
+    public function getChild(name:String)return outgoing.find((x) -> x.target.name == name).target;
 }
 
 class NodeGraph {
