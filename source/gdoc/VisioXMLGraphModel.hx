@@ -17,7 +17,7 @@ class VisioXMLGraphModel {
 			_connections = connections;
 			_transitions = transitions;
 	
-			_defaultStates = states.filter( function (x) return hasProp(x, "default") ).map(x -> getStateShapeName(x));
+			_defaultStates = states.filter( function (x) return (hasProp(x, "default") || hasProp(x, "root")) ).map(x -> getStateShapeName(x));
 	
 	
 			if (_defaultStates == null || _defaultStates.length == 0) {
