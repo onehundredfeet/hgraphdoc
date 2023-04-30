@@ -8,6 +8,6 @@
   "classPath": "source/",
   "releasenote": "",
   "contributors": [ "onehundredfeet" ],
-  "dependencies": {  "tink_core" : "", "haxe-strings" : "", "hgraphdoc" : "" }
+  "dependencies": {  "tink_core" : "" }
 
 }

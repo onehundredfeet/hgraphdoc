@@ -2,8 +2,9 @@ package gdoc;
 
 import haxe.ds.Map;
 using Lambda;
-using hx.strings.Strings; // augment all Strings with new functions
+//using hx.strings.Strings; // augment all Strings with new functions
 import haxe.ds.StringMap;
+using StringTools;
 
 function isGroupNode(shape : Xml) : Bool{
     if (shape == null) return false;
