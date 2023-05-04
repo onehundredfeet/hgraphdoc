@@ -2,7 +2,6 @@ package gdoc;
 
 import sys.io.File;
 import haxe.Json;
-import tink.core.Pair;
 import gdoc.VisioXMLTools;
 import gdoc.VisioXMLGraphModel;
 import gdoc.NodeDoc;

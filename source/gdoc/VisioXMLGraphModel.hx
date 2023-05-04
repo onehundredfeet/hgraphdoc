@@ -1,6 +1,5 @@
 package gdoc;
 
-import tink.core.Pair;
 import gdoc.VisioXMLTools;
 using Lambda;
 import gdoc.VisioXMLTools;
