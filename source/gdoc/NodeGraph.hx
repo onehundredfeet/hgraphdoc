@@ -82,7 +82,7 @@ class NodeGraph {
 
     }
 
-    public function addNode() : NodeGraphNode {
+    public inline function addNode() : NodeGraphNode {
         var x = new NodeGraphNode();
         _nodes.push(x);
         return x;
@@ -103,7 +103,9 @@ class NodeGraph {
     }
 
     public var nodes(get,never) : Array<NodeGraphNode>;
-    function get_nodes() return _nodes;
+    inline function get_nodes() return _nodes;
+
+    public inline function numNodes() return _nodes.length;
 
     var _nodes = new Array<NodeGraphNode>();
 }
