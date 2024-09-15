@@ -1,9 +1,11 @@
 package test;
 
 import gdoc.SVGGenerate;
-import gdoc.NodeGraph2D;
+import gdoc.NodeGraph;
 import gdoc.NodeGraphReader;
 import gdoc.NodeDoc;
+
+using Lambda;
 
 class Main {
 	static function main() {
@@ -42,16 +44,18 @@ class Main {
         trace('\tPage test1');
         for (n in test1Graph.nodes) {
             trace('\t\tNode ${n.name}');
-            trace('\t\t\tParent ${n.parent != null ? n.parent.name : "None"}');
+            var n_parent = n.getParent();
+            trace('\t\t\tParent ${n_parent != null ? n_parent.name : "None"}');
             if (n.properties != null) {
                 trace('\t\t\tProperties');
                 for (kv in n.properties.keyValueIterator()) {
                     trace('\t\t\t\tproperty ${kv.key} -> ${kv.value}');
                 }
 
-                if (n.outgoing != null && n.outgoing.length > 0) {
+                var n_outgoing = n.getOutgoingEdges().array();
+                if (n_outgoing != null && n_outgoing.length > 0) {
 					trace('\t\t\tOutgoing Connections');
-					for (c in n.outgoing) {
+					for (c in n_outgoing) {
 						trace('\t\t\tconnection \'${c.name}\' -> ${c.target.name}');
                         if (c.properties != null) {
                             trace('\t\t\t\tProperties');
@@ -62,9 +66,10 @@ class Main {
 					}
 				}
 
-                if (n.incoming != null && n.incoming.length > 0) {
+                var n_incoming = n.getIncomingEdges().array();
+                if (n_incoming != null && n_incoming.length > 0) {
 					trace('\t\t\tIncoming Connections');
-					for (c in n.incoming) {
+					for (c in n_incoming) {
 						trace('\t\t\tconnection \'${c.name}\' -> ${c.target.name}');
                         if (c.properties != null) {
                             trace('\t\t\t\tProperties');
@@ -79,7 +84,7 @@ class Main {
 
 
         trace('SVG');
-        var testSVGGraph = new NodeGraph2D();
+        var testSVGGraph = new NodeGraph();
         var n1 = testSVGGraph.addNode();
         n1.name = "Node 1";
         var n2 = testSVGGraph.addNode();
@@ -88,8 +93,8 @@ class Main {
         n2.y = 100;
 
         n1.connectTo(n2, "connection");
-        
-        SVGGenerate.writeNodeGraph2D("test.svg", testSVGGraph, (node, attr) -> {
+
+        SVGGenerate.writeNodeGraph("test.svg", testSVGGraph, (node, attr) -> {
             attr.fill = "lightgreen";
             attr.r = 10;
         });

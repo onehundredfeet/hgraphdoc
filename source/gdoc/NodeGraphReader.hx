@@ -15,11 +15,10 @@ class NodeGraphReader {
 
 	public static function fromPage(page:NodeDocPage):NodeGraph {
 		var g = new NodeGraph();
-		var nodeMap = new IntMap<NodeGraphNode>();
+		var nodeMap = new IntMap<Node>();
 
 		for (doc_n in page.nodes) {
-			var graph_n = g.addNode();
-			graph_n.name = doc_n.name;
+			var graph_n = g.addNode( doc_n.name);
 
 			for (prop in doc_n.properties.keyValueIterator()) {
 				graph_n.properties.set(prop.key, prop.value);
@@ -38,13 +37,7 @@ class NodeGraphReader {
 
 			if (doc_n.outgoing != null) {
 				for (doc_c in doc_n.outgoing) {
-					var c = new NodeGraphArc();
-					c.source = graph_n;
-					c.target = nodeMap.get(doc_c.id);
-					c.name = doc_c.name;
-
-					graph_n.outgoing.push(c);
-					c.target.incoming.push(c);
+					var c = graph_n.connectTo(nodeMap.get(doc_c.id), doc_c.name);
 
 					for (prop in doc_c.properties.keyValueIterator()) {
 						c.properties.set(prop.key, prop.value);

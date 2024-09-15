@@ -1,6 +1,6 @@
 package gdoc;
 import sys.io.File;
-import gdoc.NodeGraph2D;
+import gdoc.NodeGraph;
 
 class SVGNodeAttributes {
     public function new() {
@@ -26,7 +26,7 @@ class Frame {
 
 class SVGGenerate {
 
-    public static function writeNodeGraph2D( path : String, graph : NodeGraph2D, attrFn : ( NodeGraphNode2D, SVGNodeAttributes) -> Void = null, frame: Frame = null ) {
+    public static function writeNodeGraph( path : String, graph : NodeGraph, attrFn : ( Node, SVGNodeAttributes) -> Void = null, frame: Frame = null ) {
         var svgContent = new StringBuf();
         svgContent.add('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n');
         svgContent.add('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n');
@@ -54,12 +54,12 @@ class SVGGenerate {
         var height = frame != null ? frame.height : 1000.0;
 
 
-        function drawNode2D( node : NodeGraphNode2D, attr : SVGNodeAttributes) {
+        function drawNode2D( node : Node, attr : SVGNodeAttributes) {
             attr.x = (node.x - min_x) / range_x * (width - 2 * margin) + margin;
             attr.y = (node.y - min_y) / range_y * (height - 2 * margin) + margin;
             
-            for (connection in node.outgoing) {
-                var target = cast(connection.target, NodeGraphNode2D);
+            for (connection in node.getNonChildrenOutgoingEdges()) {
+                var target = cast(connection.target, Node);
                 var target_x = (target.x - min_x) / range_x * (width - 2 * margin) + margin;
                 var target_y = (target.y - min_y) / range_y * (height - 2 * margin) + margin;
 
@@ -75,7 +75,6 @@ class SVGGenerate {
                 attrFn(node, attr);
             }
 
-            
             svgContent.add('<circle cx="${attr.x}" cy="${attr.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
             if (attr.text != null) {
                 svgContent.add('<text x="${attr.x}" y="${attr.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
@@ -86,7 +85,7 @@ class SVGGenerate {
         }
         
         for (node in nodes) {
-            if (node.parent == null) {
+            if (node.getParent() == null) {
                 drawNode2D(node, attr);
             }
         }
