@@ -32,14 +32,8 @@ class NodeGraphReader {
 
 			if (doc_n.parentID != null) {
 				var parent_n = nodeMap.get(doc_n.parentID);
-				graph_n.parent = parent_n;
 
-				var pc = new NodeGraphArc();
-				pc.source = parent_n;
-				pc.target = graph_n;
-				pc.name = "_CHILD";
-				parent_n.outgoing.push(pc);
-				graph_n.incoming.push(pc);
+				parent_n.connectChild( graph_n );
 			}
 
 			if (doc_n.outgoing != null) {

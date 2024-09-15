@@ -17,6 +17,7 @@ class NodeGraphArc {
 class NodeGraphNode {
     public var name : String;
     public var parent : NodeGraphNode;
+    public var children  = new Array<NodeGraphArc>();
     public var properties = new StringMap<String>();
     public var outgoing  = new Array<NodeGraphArc>();
     public var incoming  = new Array<NodeGraphArc>();
@@ -25,29 +26,46 @@ class NodeGraphNode {
 
     }
 
-    public function getConnectedBy(relation: String) : Array<NodeGraphNode> {
+    public function connectTo(target : NodeGraphNode, relation : String = null) {
+        var arc = new NodeGraphArc();
+        arc.source = this;
+        arc.target = target;
+        arc.name = relation;
+        outgoing.push(arc);
+        target.incoming.push(arc);
+    }
+
+    public function connectChild(target : NodeGraphNode) {
+        target.parent = this;
+        var arc = new NodeGraphArc();
+        arc.source = this;
+        arc.target = target;
+        arc.name = "_CHILD";
+        children.push(arc);
+    }
+
+    public function getConnectedByOutgoing(relation: String) : Array<NodeGraphNode> {
         return outgoing.filter((x)->x.name == relation).map((x)->x.target);
     }
 
-    public function getConnectedByNot(relation: String) : Array<NodeGraphNode> {
+    public function getConnectedByNotOutgoing(relation: String) : Array<NodeGraphNode> {
         return outgoing.filter((x)->x.name != relation).map((x)->x.target);
     }
 
-    public function getChildren() return getConnectedBy("_CHILD");
-    public function getNonChildren() return getConnectedByNot("_CHILD");
-    public function hasChild(name:String) return outgoing.find((x) -> x.target.name == name) != null;
-    public function hasChildren() return outgoing.exists((x) -> x.name == "_CHILD");
-    public function numChildren() return outgoing.count((x)-> x.name == "_CHILD" );
-    public function getChild(name:String)return outgoing.find((x) -> x.target.name == name).target;
+    public inline function getChildrenConnections() return children;
+    public function getChildren() return children.map((x)->x.target);
+    public function getNonChildrenOutgoing() return outgoing.map((x)->x.target);
+    public function hasChildNamed(name:String) return children.find((x) -> x.target.name == name) != null;
+    public function hasChildren() return children.length > 0;
+    public function numChildren() return children.length;
+    public function getChildNamed(name:String)return children.find((x) -> x.target.name == name).target;
     public function root() : NodeGraphNode {
         if (parent == null) return this;
         return parent.root();
     }
     public function walkOutgoingNonChildren(f:(NodeGraphArc) -> Void) {
         for (c in outgoing) {
-            if (c.name != "_CHILD") {
-                f(c);
-            }
+            f(c);
         }
     }
 
@@ -88,14 +106,12 @@ class NodeGraph {
         return x;
     }
 
-    public function gatherTransitionNames() : Array<String> {
+    public function gatherOutgoingRelationNames() : Array<String> {
         var names = new haxe.ds.StringMap<Bool>();
      
         for (n in _nodes) {
             for (c in n.outgoing) {
-                if (c.name != "_CHILD") {
-                    names.set(c.name, true);
-                }
+                names.set(c.name, true);
             }
         }
 
@@ -109,3 +125,4 @@ class NodeGraph {
 
     var _nodes = new Array<NodeGraphNode>();
 }
+

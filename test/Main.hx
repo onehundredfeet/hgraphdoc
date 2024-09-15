@@ -1,5 +1,7 @@
 package test;
 
+import gdoc.SVGGenerate;
+import gdoc.NodeGraph2D;
 import gdoc.NodeGraphReader;
 import gdoc.NodeDoc;
 
@@ -74,5 +76,22 @@ class Main {
 				}
             }
         }
+
+
+        trace('SVG');
+        var testSVGGraph = new NodeGraph2D();
+        var n1 = testSVGGraph.addNode();
+        n1.name = "Node 1";
+        var n2 = testSVGGraph.addNode();
+        n2.name = "Node 2";
+        n2.x = 100;
+        n2.y = 100;
+
+        n1.connectTo(n2, "connection");
+        
+        SVGGenerate.writeNodeGraph2D("test.svg", testSVGGraph, (node, attr) -> {
+            attr.fill = "lightgreen";
+            attr.r = 10;
+        });
 	}
 }
