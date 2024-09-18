@@ -5,25 +5,25 @@ using Lambda;
 
 
 class Edge {
-    public function new() {
+    function new() {
 
     }
 
     public var source : Node;
     public var target : Node;
-    public var properties = new StringMap<String>();
+    public var properties = new StringMap<Dynamic>();
     public var name : String;
 }
 
+final CHILD_RELATION = "_CHILD";
+
 // Node is a bit heavy, but we're not making giant graphs
 class Node {
-    public function new() {
+    function new() {
 
     }
 
-    static final CHILD_RELATION = "_CHILD";
-
-    public var properties = new StringMap<String>();
+    public var properties = new StringMap<Dynamic>();
     public var connections  = new Array<Edge>();
 
     // User data
@@ -34,20 +34,6 @@ class Node {
     // Used for drawing
     public var x : Float;
     public var y : Float;
-
-    public function connectTo(target : Node, relation : String = null) {
-        var arc = new Edge();
-        arc.source = this;
-        arc.target = target;
-        arc.name = relation;
-        connections.push(arc);
-        target.connections.push(arc);
-        return arc;
-    }
-
-    public function connectChild(target : Node) {
-        return connectTo(target, CHILD_RELATION);
-    }
     
     // any
     public inline function getEdges() : Array<Edge> {
@@ -200,23 +186,148 @@ class Node {
 
 
 class NodeGraph {
+    var _nextId = 0;
+
     public function new() {
 
     }
 
     public function addNode(name : String = null)  {
-        var n = new Node();
+        var n = @:privateAccess new Node();
+        n.id = _nextId++;
         _nodes.push(n);
         n.name = name;
         return n;
     }
 
-    public var nodes(get,never) : Array<Node>;
-    inline function get_nodes() return _nodes;
+    public function connectNodes(source : Node, target : Node, relation : String = null) {
+        var arc =  @:privateAccess new Edge();
+        _edges.push(arc);
+        arc.source = source;
+        arc.target = target;
+        arc.name = relation;
+        source.connections.push(arc);
+        target.connections.push(arc);
+        return arc;
+    }
 
+
+    public function collapseEdge( edge : Edge, fn : (Edge, source:Node, target:Node, merged:Node) -> Void = null) : Node {
+        var source = edge.source;
+        var target = edge.target;
+        var merged = addNode();
+        removeEdge(edge);
+
+        for (c in source.connections) {
+            if (c.source == source) {
+                c.source = merged;
+            } else {
+                c.target = merged;
+            }
+            merged.connections.push(c);
+        }
+
+        for (c in target.connections) {
+            if (c.source == target) {
+                c.source = merged;
+            } else {
+                c.target = merged;
+            }
+            merged.connections.push(c);
+        }
+
+        source.connections.resize(0);
+        target.connections.resize(0);
+        _nodes.remove(target);
+        _nodes.remove(source);
+
+        if (fn != null) {
+            fn(edge, source, target, merged);
+        }
+
+        return merged;
+    }
+    public function subdivideEdge( edge : Edge, copyProperties = true, fn : (edge:Edge, source:Node, target:Node, sourceEdge:Edge, targetEdge:Edge, splitNode:Node) -> Void = null) : Node {
+        var source = edge.source;
+        var target = edge.target;
+
+        var split = addNode();
+
+        var sourceEdge = connectNodes(source, split);
+        var targetEdge = connectNodes(split, target);
+
+        for (prop in edge.properties) {
+            sourceEdge.properties.set(prop.key, prop.value);
+            targetEdge.properties.set(prop.key, prop.value);
+        }
+
+        removeEdge(edge);
+
+        if (fn != null) {
+            fn(edge, source, target, sourceEdge, targetEdge, split);
+        }
+        return split;
+    }
+
+    // replaces an edge with a subraph
+    public function replaceEdgeWithSubgraph( edge : Edge, sourceNew : Node, targetNew : Node) {
+        var source = edge.source;
+        var target = edge.target;
+
+        var sourceEdge = connectNodes(source, sourceNew);
+        var targetEdge = connectNodes(targetNew, target);
+
+        removeEdge(edge);
+    }
+
+    public function replaceNodeWithSubgraph( node : Node, fn : (Edge) -> Node) {
+        for (c in node.connections) {
+            var newNode = fn(c);
+            if (newNode != null) {
+                if (c.source == node) {
+                    c.source = newNode;
+                } else {
+                    c.target = newNode;
+                }
+            }
+        }
+        node.connections.resize(0);
+        removeNode(node);
+    }
+
+    public function parentNode(parent : Node, child : Node) {
+        return connectNodes(parent, child, CHILD_RELATION);
+    }
+
+    public function removeNode(node : Node) {
+        _nodes.remove(node);
+        for (c in node.connections) {
+            if (c.source == node) {
+                c.target.connections.remove(c);
+            } else {
+                c.source.connections.remove(c);
+            }
+            _edges.remove(c);
+        }
+
+        node.connections.resize(0);
+    }
+
+    public function removeEdge(edge : Edge) {
+        edge.source.connections.remove(edge);
+        edge.target.connections.remove(edge);
+        _edges.remove(edge);
+    }
+
+    public var nodes(get,never) : Array<Node>;
+    public var edges(get,never) : Array<Edge>;
+    inline function get_nodes() return _nodes;
+    inline function get_edges() return _edges;
+    
     public inline function numNodes() return _nodes.length;
 
     var _nodes = new Array<Node>();
+    var _edges = new Array<Edge>();
 
     public function gatherOutgoingRelationNames() : Array<String> {
         var names = new haxe.ds.StringMap<Bool>();
@@ -228,7 +339,7 @@ class NodeGraph {
             }
         }
 
-        names.remove(@:privateAccess Node.CHILD_RELATION);
+        names.remove(@:privateAccess CHILD_RELATION);
 
         return [for (k in names.keys()) k];
     }

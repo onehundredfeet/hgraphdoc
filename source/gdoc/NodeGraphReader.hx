@@ -32,12 +32,12 @@ class NodeGraphReader {
 			if (doc_n.parentID != null) {
 				var parent_n = nodeMap.get(doc_n.parentID);
 
-				parent_n.connectChild( graph_n );
+				g.parentNode(parent_n, graph_n );
 			}
 
 			if (doc_n.outgoing != null) {
 				for (doc_c in doc_n.outgoing) {
-					var c = graph_n.connectTo(nodeMap.get(doc_c.id), doc_c.name);
+					var c = g.connectNodes(graph_n, nodeMap.get(doc_c.id), doc_c.name);
 
 					for (prop in doc_c.properties.keyValueIterator()) {
 						c.properties.set(prop.key, prop.value);

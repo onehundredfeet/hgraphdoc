@@ -92,7 +92,7 @@ class Main {
         n2.x = 100;
         n2.y = 100;
 
-        n1.connectTo(n2, "connection");
+        testSVGGraph.connectNodes(n1, n2, "connection");
 
         SVGGenerate.writeNodeGraph("test.svg", testSVGGraph, (node, attr) -> {
             attr.fill = "lightgreen";
