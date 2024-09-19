@@ -1,2 +1,5 @@
 bin
 test.svg
+.DS_Store
+rewrite_after.svg
+rewrite_before.svg

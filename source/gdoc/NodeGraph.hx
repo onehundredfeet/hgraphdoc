@@ -8,7 +8,8 @@ class Element {
     public var properties = new StringMap<Dynamic>();
     public var name : String;
 
-    public function clonePropertiesTo( other : Element) {
+    public function cloneTo( other : Element) {
+        other.name = name;
         for (prop in properties) {
             other.properties.set(prop.key, prop.value);
         }
@@ -359,8 +360,9 @@ class NodeGraph {
             var n2 = g.addNode();
             if (cloneFn != null) 
                 cloneFn(n, n2);
-            else
-                n.clonePropertiesTo(n2);
+            else {
+                n.cloneTo(n2);
+            }
 
             nodeMap.set(n.id, n2);
         }
@@ -370,10 +372,11 @@ class NodeGraph {
             var e2 = g.connectNodes(src, tgt, e.name);
             if (cloneFn != null)  
                 cloneFn(e, e2);
-            else
-                e.clonePropertiesTo(e2);
+            else {
+                e.cloneTo(e2);
+            }
         }
-        
+
         return g;
     }
 }

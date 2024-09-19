@@ -8,11 +8,11 @@ typedef Graph = gdoc.NodeGraph;
 typedef GraphElement = gdoc.Element;
 
 enum EMatcher {
-	EAny;
-	EString(string:String);
-	EInt(int:Int);
-	ERegex(regex:EReg);
-	EFn(fn:(Dynamic) -> Bool);
+	MatchAny;
+	MatchString(string:String);
+	MatchInt(int:Int);
+	MatchRegex(regex:EReg);
+	MatchFn(fn:(Dynamic) -> Bool);
 }
 
 abstract Matcher(EMatcher) {
@@ -22,20 +22,20 @@ abstract Matcher(EMatcher) {
 		}
 		if (value is Int) {
 			switch (this) {
-				case EAny:
+				case MatchAny:
 					return true;
-				case EInt(i):
+				case MatchInt(i):
 					return i == value;
-				case EFn(f):
+				case MatchFn(f):
 					return f(value);
 				default:
 					return false;
 			}
 		}
 		switch (this) {
-			case EAny:
+			case MatchAny:
 				return true;
-			case EFn(f):
+			case MatchFn(f):
 				return f(value);
 			default:
 				return false;
@@ -44,15 +44,15 @@ abstract Matcher(EMatcher) {
 
 	public function matchString(value:String):Bool {
 		switch (this) {
-			case EAny:
+			case MatchAny:
 				return true;
-			case EString(s):
+			case MatchString(s):
 				return s == value;
-			case EInt(i):
+			case MatchInt(i):
 				return value != null && Std.parseInt(value) == i;
-			case ERegex(r):
+			case MatchRegex(r):
 				return value != null && r.match(value);
-			case EFn(f):
+			case MatchFn(f):
 				return f(value);
 		}
 		return false;
@@ -160,15 +160,15 @@ class NodePattern extends Pattern {
 
 				for (candidate in candidateNode.connections) {
 					switch (edgePattern.value.direction) {
-						case EDirection.EOutgoing:
+						case EDirection.DirOutgoing:
 							if (candidate.source != candidateNode) {
 								continue;
 							}
-						case EDirection.EIncoming:
+						case EDirection.DirIncoming:
 							if (candidate.target != candidateNode) {
 								continue;
 							}
-						case EDirection.EAny:
+						case EDirection.DirAny:
 							break;
 					}
 
@@ -190,13 +190,13 @@ class NodePattern extends Pattern {
 }
 
 enum EDirection {
-	EOutgoing;
-	EIncoming;
-	EAny;
+	DirOutgoing;
+	DirIncoming;
+	DirAny;
 }
 
 class EdgePattern extends Pattern {
-	public function new(direction:EDirection = EAny, name:Matcher = null, properties:Map<String, Matcher> = null, fn:EdgeMatchFn = null, user:Dynamic = null,
+	public function new(direction:EDirection = DirAny, name:Matcher = null, properties:Map<String, Matcher> = null, fn:EdgeMatchFn = null, user:Dynamic = null,
 			source:NodePattern = null, target:NodePattern = null) {
 		this.name = name;
 		this.properties = properties;
@@ -524,14 +524,19 @@ class OpSplitEdge extends Operation {
 	public var node:MetaNode;
 
 	public function apply(matches:MatchVector, context:MetaContext) {
-        for (match in matches) {
-            if (match is NodeMatch) {
-                return false;
-            }
-            var edgeMatch = cast(match, EdgeMatch);
-            var edge = edgeMatch.edge;
-            context.graph.subdivideEdge(edge, true);
+
+        trace('Splitting edge ${matches}');
+        var match = matches[0];
+
+        if (match is NodeMatch) {
+            return false;
         }
+        var edgeMatch = cast(match, EdgeMatch);
+        var edge = edgeMatch.edge;
+
+        trace('subdividing edge ${edge} on graph ${context.graph}');
+
+        context.graph.subdivideEdge(edge, true);
 		return true;
 	}
 }
@@ -587,14 +592,13 @@ class OpAddEdge extends Operation {
 
 
 class Rule {
-	public function new(patterns:Array<Pattern>, operation:Operation, all:Bool = true) {
+	public function new(patterns:Array<Pattern>, operation:Operation) {
 		this.patterns = patterns;
 		this.operation = operation;
 	}
 
 	public var patterns:Array<Pattern>;
 	public var operation:Operation;
-	public var all:Bool;
 
     function getElementsMatchingPath( path : MatchVector, pattern : Pattern, graph:Graph) : Array<ElementMatch> {
         var matches : Array<ElementMatch> = [];
@@ -610,24 +614,27 @@ class Rule {
             return matches;
         } else {
             var edgePattern = cast(pattern, EdgePattern);
+            trace('Looking for edge pattern ${edgePattern} in ${graph.edges}');
             for (e in graph.edges) {
                 var match = edgePattern.matchEdge(path, e);
+                trace('Match ${match}');
                 if (match != null) {
                     matches.push(match);
                 }
             }
-            return null;
+            return matches;
         }
     }
 
 
     function getAllVariations( graph : Graph, variations: Array<MatchVector>, patterns : Array<Pattern> ) {
+        trace('variations ${variations} - patterns ${patterns}');
         if (patterns.length == 0) {
             return variations;
         }
 
         var newVariations = [];
-        var pattern : NodePattern = cast patterns[0];
+        var pattern = patterns[0];
         var rest = patterns.slice(1);
 
         for (v in variations) {
@@ -687,13 +694,18 @@ class Rule {
 	}
 }
 
-class ReplacementEngine {
+class RewriteEngine {
 	public function new(rules:Array<Rule>) {
 		this.rules = rules;
+
+        defaultFitness = function(graph:Graph) {
+            return 1.0;
+        };
 	}
 
 	public var rules:Array<Rule>;
 	public var propertyPolicy:EMetaValue = EMetaValue.ECopy;
+    public var defaultFitness:(Graph) -> Float;
 
 	public function applyFirst(graph:Graph, user:Dynamic) {
 		var context = new MetaContext(graph, user);
@@ -710,17 +722,21 @@ class ReplacementEngine {
 		}
 	}
 
-    public function applyBest(graph:Graph, fitness : (Graph) -> Float, user:Dynamic) {
+    public function applyBest(graph:Graph, fitness : (Graph) -> Float = null, user:Dynamic = null) {
         var context = new MetaContext(graph, user);
         context.graph = graph;
 
-        var variations = [];
+        if (fitness == null) {
+            fitness = defaultFitness;
+        }
 
         var topScore = Math.NEGATIVE_INFINITY;
         var topGraph : Graph = null;
 
         for (r in rules) {
+            trace('Applying rule ${r}');
             var ruleVariations = r.findAllVariations(graph);
+            trace('Result: ${ruleVariations.length} variations');
             if (ruleVariations != null) {
                 for (v in ruleVariations) {
                     var newGraph = graph.clone();
