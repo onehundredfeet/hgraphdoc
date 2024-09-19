@@ -1,3 +1,4 @@
 --class-path source
 --main test.Main
+--library seedyrng
 -hl bin/test.hl

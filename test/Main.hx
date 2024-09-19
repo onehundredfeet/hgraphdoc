@@ -1,5 +1,6 @@
 package test;
 
+import seedyrng.Seedy;
 import gdoc.SVGGenerate;
 import gdoc.NodeGraph;
 import gdoc.NodeGraphReader;
@@ -115,10 +116,13 @@ class Main {
             trace(NodeGraphPrinter.graphToString(rewriteGraph));
 
 			var rules = [
-				new Rule([new EdgePattern(DirAny, MatchAny)], new OpSplitEdge(new MetaEdge(MStrLiteral("incoming")), new MetaEdge(MStrLiteral("outgoing")), new MetaNode(MStrLiteral("split"))))
+				new Rule([new EdgePattern(DirAny, MatchAny)], new OpSplitEdge(new MetaEdge(MStrLiteral("incoming")), new MetaEdge(MStrLiteral("outgoing")), new MetaNode(MStrLiteral("split")))),
+                new Rule([new NodePattern(MatchString("Start"))], new OpAddNode(new MetaEdge(MStrLiteral("NewExtension")),new MetaNode(MStrLiteral("NewExpansion"))))
 			];
 			var engine = new RewriteEngine(rules);
-
+            engine.defaultFitness = (graph:Graph) -> {
+                return 1 + Seedy.random() * 10;
+            };
             var out = engine.applyBest(rewriteGraph);
 
             if (out != null) {
