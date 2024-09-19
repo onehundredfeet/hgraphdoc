@@ -307,10 +307,10 @@ enum EMetaValue {
 	EFloat(float:Float);
 	EBool(bool:Bool);
 	MStrRewrite(regex:EReg, sub:String);
-	EFn(fn:(MetaElement, ElementMatch, Dynamic) -> Dynamic);
+	EFn(fn:(MetaElement, MatchVector, Dynamic) -> Dynamic);
 }
 
-function generateValue(element:MetaElement, matched:ElementMatch, generator:EMetaValue, value:Dynamic, context:MetaContext):Dynamic {
+function generateValue(element:MetaElement, matched:MatchVector, generator:EMetaValue, value:Dynamic, context:MetaContext):Dynamic {
 	return switch (generator) {
 		case EDefault: context.propertyPolicy != EDefault ? generateValue(element, matched, context.propertyPolicy, value, context) : null;
 		case EClear, ENull: null;
@@ -333,8 +333,7 @@ class MetaElement {
 
 	static final DEFAULT_STRING = "";
 
-	public function mutate(match:ElementMatch, context:MetaContext) {
-		var element = match.element;
+	public function mutate(match:MatchVector, element: Element, context:MetaContext) {
 		if (name != null) {
 			element.name = generateString(this, name, element.name, context);
 		}
@@ -380,7 +379,7 @@ class MetaElement {
 		}
 	}
 
-	public function generateProperties(element:Element, match:ElementMatch, context:MetaContext) {
+	public function generateProperties(element:Element, match:MatchVector, context:MetaContext) {
 		if (properties != null) {
 			for (prop in properties.keyValueIterator()) {
 				if (prop.value != null && prop.value != EMetaValue.EClear) {
@@ -407,16 +406,15 @@ class MetaNode extends MetaElement {
 		return edge;
 	}
 
-	public override function mutate(match:ElementMatch, context:MetaContext) {
-		var nodeMatch = cast(match, NodeMatch);
-		var node = nodeMatch.node;
-		super.mutate(match, context);
+	public override function mutate(match:MatchVector, element: Element, context:MetaContext) {
+        var node = cast(element, Node);
+		super.mutate(match, node, context);
 		if (post != null) {
 			post(this, node, context);
 		}
 	}
 
-	public function generateNode(match:ElementMatch, context:MetaContext):Node {
+	public function generateNode(match:MatchVector, context:MetaContext):Node {
 		var name = generateString(this, name, MetaElement.DEFAULT_STRING, context);
 		var node = context.graph.addNode(name);
 
@@ -443,20 +441,21 @@ class MetaEdge extends MetaElement {
 		return node;
 	}
 
-	public override function mutate(match:ElementMatch, context:MetaContext) {
-		var edgeMatch = cast(match, EdgeMatch);
-		var edge = edgeMatch.edge;
-		super.mutate(match, context);
+	public override function mutate(match:MatchVector, element:Element, context:MetaContext) {
+		super.mutate(match, element, context);
+        var edge = cast(element, Edge);
+
 		if (post != null) {
 			post(this, edge);
 		}
 	}
 
-	public function generateEdge(source:NodeMatch, target:Node, context:MetaContext):Edge {
+	public function generateEdge(match:MatchVector, source:Node, target:Node, context:MetaContext):Edge {
 		var name = generateString(this, name, MetaElement.DEFAULT_STRING, context);
-		var edge = context.graph.connectNodes(source.node, target, name);
+        trace('Generating edge ${name} from ${source.name} to ${target.name}');
+		var edge = context.graph.connectNodes(source, target, name);
 
-		generateProperties(edge, source, context);
+		generateProperties(edge, match, context);
 
 		if (post != null) {
 			post(this, edge);
@@ -480,13 +479,18 @@ class OpMutateEdge extends Operation {
 	}
 
 	public function apply(matches:MatchVector, context:MetaContext) {
-		for (match in matches) {
-			if (match is NodeMatch) {
-				return false;
-			}
-			var edgeMatch = cast(match, EdgeMatch);
-			edge.mutate(edgeMatch, context);
-		}
+        if (matches.length == 0) {
+            return false;
+        }
+
+        var m = matches[0];
+        if (m is NodeMatch) {
+            return false;
+        }
+
+        var edgeMatch = cast(m, EdgeMatch);
+
+        edge.mutate(matches, edgeMatch.edge, context);
 		return true;
 	}
 
@@ -499,13 +503,17 @@ class OpMutateNode extends Operation {
 	}
 
 	public function apply(matches:MatchVector, context:MetaContext) {
-		for (match in matches) {
-			if (match is EdgeMatch) {
-				return false;
-			}
-			var nodeMatch = cast(match, NodeMatch);
-			node.mutate(nodeMatch, context);
-		}
+        if (matches.length == 0) {
+            return false;
+        }
+        var m = matches[0];
+        if (m is EdgeMatch) {
+            return false;
+        }
+
+
+        var nodeMatch = cast(m, NodeMatch);
+        node.mutate(matches, nodeMatch.node, context);
 		return true;
 	}
 
@@ -536,7 +544,16 @@ class OpSplitEdge extends Operation {
 
         trace('subdividing edge ${edge} on graph ${context.graph}');
 
-        context.graph.subdivideEdge(edge, true);
+        var source = edge.source;
+        var target = edge.target;
+
+        var newNode = node.generateNode(matches, context);
+
+        var newIncoming = incoming.generateEdge(matches, source, newNode, context);
+        var newOutgoing = outgoing.generateEdge(matches, newNode, target, context);
+
+       context.graph.removeEdge(edge);
+
 		return true;
 	}
 }
@@ -551,15 +568,19 @@ class OpAddNode extends Operation {
 	public var node:MetaNode;
 
 	public function apply(matches:MatchVector, context:MetaContext) {
-        for (match in matches) {
-            if (match is EdgeMatch) {
-                return false;
-            }
-            var nodeMatch = cast(match, NodeMatch);
-
-            var newNode = node.generateNode(match, context);
-            edge.generateEdge(nodeMatch, newNode, context);
+        if (matches.length == 0) {
+            return false;
         }
+        var match = matches[0];
+
+        if (match is EdgeMatch) {
+            return false;
+        }
+
+        var nodeMatch = cast(match, NodeMatch);
+        var newNode = node.generateNode(matches, context);
+        edge.generateEdge(matches, nodeMatch.node, newNode, context);
+
 		return true;
 	}
 }
@@ -572,20 +593,18 @@ class OpAddEdge extends Operation {
 	public var edge:MetaEdge;
 
 	public function apply(matches:Array<ElementMatch>, context:MetaContext) {
-
-        if (matches.length < 2 || matches.length % 2 != 0) {
+        if (matches == null || matches.length != 0) {
             return false;
         }
-        for (i in 0...Std.int(matches.length / 2)) {
-            var sourceNode = cast(matches[i * 2], NodeMatch);
-            var targetNode = cast(matches[i * 2 + 1], NodeMatch);
-
-            if (sourceNode == null || targetNode == null) {
-                return false;
-            }
-
-            edge.generateEdge(sourceNode, targetNode.node, context);
+        if (matches[0] is EdgeMatch || matches[1] is EdgeMatch) {
+            return false;
         }
+
+        var sourceNode = cast(matches[0], NodeMatch);
+        var targetNode = cast(matches[1], NodeMatch);            
+
+        edge.generateEdge(matches, sourceNode.node, targetNode.node, context);
+
 		return true;
 	}
 }
