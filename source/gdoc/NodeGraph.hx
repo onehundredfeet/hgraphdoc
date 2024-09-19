@@ -4,30 +4,38 @@ import haxe.ds.StringMap;
 using Lambda;
 
 
-class Edge {
+class Element {
+    public var properties = new StringMap<Dynamic>();
+    public var name : String;
+
+    public function clonePropertiesTo( other : Element) {
+        for (prop in properties) {
+            other.properties.set(prop.key, prop.value);
+        }
+    }
+}
+
+
+class Edge extends Element {
     function new() {
 
     }
 
     public var source : Node;
     public var target : Node;
-    public var properties = new StringMap<Dynamic>();
-    public var name : String;
 }
 
 final CHILD_RELATION = "_CHILD";
 
 // Node is a bit heavy, but we're not making giant graphs
-class Node {
+class Node extends Element  {
     function new() {
 
     }
 
-    public var properties = new StringMap<Dynamic>();
     public var connections  = new Array<Edge>();
 
     // User data
-    public var name : String;
     public var id : Int;
     public var user : Dynamic;
 
@@ -342,6 +350,31 @@ class NodeGraph {
         names.remove(@:privateAccess CHILD_RELATION);
 
         return [for (k in names.keys()) k];
+    }
+
+    public function clone(cloneFn : (src:Element, tgt:Element)->Void = null) : NodeGraph {
+        var g = new NodeGraph();
+        var nodeMap = new haxe.ds.IntMap<Node>();
+        for (n in _nodes) {
+            var n2 = g.addNode();
+            if (cloneFn != null) 
+                cloneFn(n, n2);
+            else
+                n.clonePropertiesTo(n2);
+
+            nodeMap.set(n.id, n2);
+        }
+        for (e in _edges) {
+            var src = nodeMap.get(e.source.id);
+            var tgt = nodeMap.get(e.target.id);
+            var e2 = g.connectNodes(src, tgt, e.name);
+            if (cloneFn != null)  
+                cloneFn(e, e2);
+            else
+                e.clonePropertiesTo(e2);
+        }
+        
+        return g;
     }
 }
 
