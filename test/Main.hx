@@ -120,8 +120,8 @@ class Main {
                 new Rule([new NodePattern(MatchString("Start"))], new OpAddNode(new MetaEdge(MStrLiteral("NewStartExtension")),new MetaNode(MStrLiteral("NewExpansion")))),
                 new Rule([new NodePattern(MatchString("End"))], new OpAddNode(new MetaEdge(MStrLiteral("NewEndExtension")),new MetaNode(MStrLiteral("NewEndExpansion")))),
 			];
-			var engine = new RewriteEngine(rules, [(_)-> return Seedy.random() * 10]);
-            var out = engine.applyBest(rewriteGraph);
+
+            var out = GraphRewriter.applyBest(rewriteGraph, rules, [(_)-> return Seedy.random() * 10]);
 
             if (out != null) {
                 trace('Resulting Graph');

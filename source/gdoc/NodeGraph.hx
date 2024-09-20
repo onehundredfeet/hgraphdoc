@@ -5,12 +5,21 @@ using Lambda;
 
 
 class Element {
+
+    function new(id : Int) {
+        this.id = id;
+
+    }
     public var properties = new StringMap<Dynamic>();
     public var name : String;
+    public var id(default, null) : Int;
+    public var user : Dynamic;
 
-    public function cloneTo( other : Element) {
+    function cloneTo( other : Element) {
+        id = other.id;
+        user = other.user;
         other.name = name;
-        for (prop in properties) {
+        for (prop in properties.keyValueIterator()) {
             other.properties.set(prop.key, prop.value);
         }
     }
@@ -18,10 +27,6 @@ class Element {
 
 
 class Edge extends Element {
-    function new() {
-
-    }
-
     public var source : Node;
     public var target : Node;
 }
@@ -30,15 +35,10 @@ final CHILD_RELATION = "_CHILD";
 
 // Node is a bit heavy, but we're not making giant graphs
 class Node extends Element  {
-    function new() {
-
-    }
-
     public var connections  = new Array<Edge>();
 
     // User data
-    public var id : Int;
-    public var user : Dynamic;
+   
 
     // Used for drawing
     public var x : Float;
@@ -208,15 +208,14 @@ class NodeGraph {
     }
 
     public function addNode(name : String = null)  {
-        var n = @:privateAccess new Node();
-        n.id = _nextId++;
+        var n = @:privateAccess new Node(_nextId++);
         _nodes.push(n);
         n.name = name;
         return n;
     }
 
     public function connectNodes(source : Node, target : Node, relation : String = null) {
-        var arc =  @:privateAccess new Edge();
+        var arc =  @:privateAccess new Edge(_nextId++);
         _edges.push(arc);
         arc.source = source;
         arc.target = target;
@@ -225,7 +224,6 @@ class NodeGraph {
         target.connections.push(arc);
         return arc;
     }
-
 
     public function collapseEdge( edge : Edge, fn : (Edge, source:Node, target:Node, merged:Node) -> Void = null) : Node {
         var source = edge.source;
@@ -329,6 +327,7 @@ class NodeGraph {
     }
 
     public function removeEdge(edge : Edge) {
+        //trace('Removing edge ${edge.name} : ${edge.source.name} -> ${edge.target.name}');
         edge.source.connections.remove(edge);
         edge.target.connections.remove(edge);
         _edges.remove(edge);
@@ -367,7 +366,7 @@ class NodeGraph {
             if (cloneFn != null) 
                 cloneFn(n, n2);
             else {
-                n.cloneTo(n2);
+                @:privateAccess n.cloneTo(n2);
             }
 
             nodeMap.set(n.id, n2);
@@ -379,11 +378,25 @@ class NodeGraph {
             if (cloneFn != null)  
                 cloneFn(e, e2);
             else {
-                e.cloneTo(e2);
+                @:privateAccess e.cloneTo(e2);
             }
         }
 
         return g;
+    }
+
+    public inline function getNodeFromID(id : Int) : Node {
+        return _nodes.find((x)->x.id == id);
+    }
+
+    public inline function getEdgeFromID(id : Int) : Edge {
+        return _edges.find((x)->x.id == id);
+    }
+
+    public inline function getElementFromId(id : Int) : Element {
+        var n = getNodeFromID(id);
+        if (n != null) return n;
+        return getEdgeFromID(id);
     }
 }
 
