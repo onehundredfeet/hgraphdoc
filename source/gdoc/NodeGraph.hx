@@ -105,6 +105,12 @@ class Node extends Element  {
         return getOutgoingEdgesByNot(relation).map((x)->x.target);
     }
 
+    public function isConnected( n : Node) : Bool {
+        for (c in connections) {
+            if (c.source == n || c.target == n) return true;
+        }
+        return false;
+    }
     // incoming
     public inline function getIncomingEdges() : Iterable<Edge> {
         return connections.filter((x)->(x.target == this));

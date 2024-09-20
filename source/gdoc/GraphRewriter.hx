@@ -67,6 +67,7 @@ abstract class ElementMatch {
 	public var element(get, never):GraphElement;
 
 	abstract function get_element():GraphElement;
+
 }
 
 typedef MatchVector = Array<ElementMatch>;
@@ -110,6 +111,13 @@ abstract class Pattern {
 
 	abstract function matchElement(previous: MatchVector, candidate:GraphElement):ElementMatch;
 
+    public function noDuplicates():Pattern {
+        _noDuplicates = true;
+        return this;
+    }
+
+    var _noDuplicates:Bool = false;
+
 }
 
 class NodePattern extends Pattern {
@@ -125,6 +133,13 @@ class NodePattern extends Pattern {
 	public var fn:NodeMatchFn;
 	public var edges:Map<String, EdgePattern>;
 
+    public function noConnections():NodePattern {
+        _onlyUnconnected = true;
+        return this;
+    }
+
+    var _onlyUnconnected:Bool = false;
+
 	public function matchElement(path: MatchVector,candidateElement:GraphElement):ElementMatch {
 
 		if (candidateElement is Node) {
@@ -137,6 +152,20 @@ class NodePattern extends Pattern {
         if (predicate != null) {
             if (!predicate(path)) {
                 return null;
+            }
+        }
+
+        if (_onlyUnconnected || _noDuplicates) {
+            for (p in path) {
+                if (p is NodeMatch) {
+                    var nodeMatch = cast p, NodeMatch;
+                    if (_noDuplicates && nodeMatch.node == candidateNode) {
+                        return null;
+                    }
+                    if (_onlyUnconnected && nodeMatch.node.isConnected(candidateNode)) {
+                        return null;
+                    }
+                }
             }
         }
 
@@ -602,6 +631,14 @@ class OpAddEdge extends Operation {
 
         var sourceNode = cast(matches[0], NodeMatch);
         var targetNode = cast(matches[1], NodeMatch);            
+
+        if (sourceNode == targetNode) {
+            return false;
+        }
+
+        if (sourceNode.node.isConnected(targetNode.node)) {
+            return false;
+        }
 
         edge.generateEdge(matches, sourceNode.node, targetNode.node, context);
 

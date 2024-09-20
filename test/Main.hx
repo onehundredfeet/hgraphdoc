@@ -117,7 +117,8 @@ class Main {
 
 			var rules = [
 				new Rule([new EdgePattern(DirAny, MatchAny)], new OpSplitEdge(new MetaEdge(MStrLiteral("incoming")), new MetaEdge(MStrLiteral("outgoing")), new MetaNode(MStrLiteral("split")))),
-                new Rule([new NodePattern(MatchString("Start"))], new OpAddNode(new MetaEdge(MStrLiteral("NewExtension")),new MetaNode(MStrLiteral("NewExpansion"))))
+                new Rule([new NodePattern(MatchString("Start"))], new OpAddNode(new MetaEdge(MStrLiteral("NewExtension")),new MetaNode(MStrLiteral("NewExpansion")))),
+                new Rule([new NodePattern(MatchString("End"))], new OpAddNode(new MetaEdge(MStrLiteral("NewEndExtension")),new MetaNode(MStrLiteral("NewEndExpansion")))),
 			];
 			var engine = new RewriteEngine(rules);
             engine.defaultFitness = (graph:Graph) -> {
