@@ -38,7 +38,13 @@ class Node extends Element  {
     public var connections  = new Array<Edge>();
 
     // User data
-   
+
+    override function cloneTo( other : Element) {
+        super.cloneTo(other);
+        var n = cast other;
+        n.x = x;
+        n.y = y;
+    }
 
     // Used for drawing
     public var x : Float;

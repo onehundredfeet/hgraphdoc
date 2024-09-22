@@ -630,6 +630,9 @@ class OpSplitEdge extends Operation {
 
 		var newNode = node.generateNode(matches, context);
 
+		newNode.x = (source.x + target.x) / 2;
+		newNode.y = (source.y + target.y) / 2;
+		
 		var newIncoming = incoming.generateEdge(matches, source, newNode, context);
 		var newOutgoing = outgoing.generateEdge(matches, newNode, target, context);
 
@@ -689,6 +692,13 @@ class OpAddNode extends Operation {
 	var _post : ( MatchVector, Node, MetaContext) -> Void;
 }
 
+
+class OpNop extends Operation {
+    public function new() {}
+    public function apply(matches:MatchVector, context:MetaContext) {
+        return true;
+    }
+}
 class OpAddEdge extends Operation {
 	public function new(edge:MetaEdge) {
 		this.edge = edge;
