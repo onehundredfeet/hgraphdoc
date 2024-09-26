@@ -30,6 +30,20 @@ class SVGGenerate {
         var svgContent = new StringBuf();
         svgContent.add('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n');
         svgContent.add('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n');
+        svgContent.add('<defs>\n');
+        svgContent.add('\t<marker\n');
+        svgContent.add('\t\tid="arrow"\n');
+        svgContent.add('\t\tviewBox="0 0 10 10"\n');
+        svgContent.add('\t\trefX="5"\n');
+        svgContent.add('\t\trefY="5"\n');
+        svgContent.add('\t\tmarkerWidth="6"\n');
+        svgContent.add('\t\tmarkerHeight="6"\n');
+        svgContent.add('\t\torient="auto-start-reverse">\n');
+        svgContent.add('\t<path d="M 0 0 L 10 5 L 0 10 z" />\n');
+        svgContent.add('\t</marker>\n');
+        svgContent.add('</defs>\n');
+
+        
 
         // Define nodes with positions
         var nodes = graph.nodes;
@@ -49,23 +63,16 @@ class SVGGenerate {
         }
         var range_x = max_x - min_x;
         var range_y = max_y - min_y;
+        var scale = Math.max(range_x, range_y);
         var margin = frame != null ? frame.margin : 100.0;
         var width = frame != null ? frame.width : 1000.0;
         var height = frame != null ? frame.height : 1000.0;
 
 
         function drawNode2D( node : Node, attr : SVGNodeAttributes) {
-            attr.x = (node.x - min_x) / range_x * (width - 2 * margin) + margin;
-            attr.y = (node.y - min_y) / range_y * (height - 2 * margin) + margin;
+            attr.x = (node.x - min_x) / scale * (width - 2 * margin) + margin;
+            attr.y = (node.y - min_y) / scale * (height - 2 * margin) + margin;
             
-            for (connection in node.getNonChildrenOutgoingEdges()) {
-                var target = cast(connection.target, Node);
-                var target_x = (target.x - min_x) / range_x * (width - 2 * margin) + margin;
-                var target_y = (target.y - min_y) / range_y * (height - 2 * margin) + margin;
-
-                svgContent.add('<line x1="${attr.x}" y1="${attr.y}" x2="${target_x}" y2="${target_y}" stroke="black"/>\n');
-            }
-
             attr.r = 1.0;
             attr.fill = "lightblue";
             attr.stroke = "black";
@@ -76,6 +83,25 @@ class SVGGenerate {
             }
 
             svgContent.add('<circle cx="${attr.x}" cy="${attr.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+
+            for (connection in node.getNonChildrenOutgoingEdges()) {
+                var target = cast(connection.target, Node);
+                var target_x = (target.x - min_x) / scale * (width - 2 * margin) + margin;
+                var target_y = (target.y - min_y) / scale * (height - 2 * margin) + margin;
+
+                var delta_x = target_x - attr.x;
+                var delta_y = target_y - attr.y;
+                var length = Math.sqrt(delta_x * delta_x + delta_y * delta_y);
+                delta_x /= length;
+                delta_y /= length;
+
+                var x0 = attr.x + delta_x * attr.r* 1.5;
+                var y0 = attr.y + delta_y * attr.r* 1.5;
+                var x1 = target_x - delta_x * attr.r * 1.5;
+                var y1 = target_y - delta_y * attr.r* 1.5;
+                svgContent.add('<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="black" marker-end="url(#arrow)" />\n');
+            }
+            
             if (attr.text != null) {
                 svgContent.add('<text x="${attr.x}" y="${attr.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
             }
