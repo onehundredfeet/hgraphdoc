@@ -63,7 +63,7 @@ class Node extends Element  {
         return connections.filter((x)->x.name == relation);
     }
 
-    public inline function getConnectedNodes() : Iterable<Node> {
+    public inline function getConnectedNodes() : Array<Node> {
         return connections.map((x)->x.target);
     }
 
@@ -71,23 +71,23 @@ class Node extends Element  {
         return connections.find((x)->x.name == relation).target;
     }
 
-    public inline function getConnectedNodesBy(relation: String) : Iterable<Node> {
+    public inline function getConnectedNodesBy(relation: String) : Array<Node> {
         return connections.filter((x)->x.name == relation).map((x)->x.target);
     }
 
-    public inline function getConnectedNodesByNot(relation: String) : Iterable<Node> {
+    public inline function getConnectedNodesByNot(relation: String) : Array<Node> {
         return connections.filter((x)->x.name != relation).map((x)->x.target);
     }
     
     // outgoing
-    public inline function getOutgoingEdges() : Iterable<Edge> {
+    public inline function getOutgoingEdges() : Array<Edge> {
         return connections.filter((x)->(x.source == this));
     }
     public inline function getOutgoingEdge(relation:String) : Edge {
         return connections.find((x)->(x.source == this && x.name == relation));
     }
 
-    public inline function getOutgoingNodes() : Iterable<Node> {
+    public inline function getOutgoingNodes() : Array<Node> {
         return connections.filter((x)->(x.source == this)).map((x)->x.target);
     }
 
@@ -96,18 +96,18 @@ class Node extends Element  {
         if (e == null) return null;
         return e.target;
     }
-    public inline function getOutgoingEdgesBy(relation: String) : Iterable<Edge> {
+    public inline function getOutgoingEdgesBy(relation: String) : Array<Edge> {
         return connections.filter((x)->(x.source == this && x.name == relation));
     }
-    public inline function getOutgoingEdgesByNot(relation: String) : Iterable<Edge> {
+    public inline function getOutgoingEdgesByNot(relation: String) : Array<Edge> {
         return connections.filter((x)->(x.source == this && x.name != relation));
     }
 
-    public function getOutgoingNodesBy(relation: String) : Iterable<Node> {
+    public function getOutgoingNodesBy(relation: String) : Array<Node> {
         return getOutgoingEdgesBy(relation).map((x)->x.target);
     }
 
-    public function getOutgoingNodesByNot(relation: String) : Iterable<Node> {
+    public function getOutgoingNodesByNot(relation: String) : Array<Node> {
         return getOutgoingEdgesByNot(relation).map((x)->x.target);
     }
 
@@ -118,13 +118,13 @@ class Node extends Element  {
         return false;
     }
     // incoming
-    public inline function getIncomingEdges() : Iterable<Edge> {
+    public inline function getIncomingEdges() : Array<Edge> {
         return connections.filter((x)->(x.target == this));
     }
     public inline function getIncomingEdge(relation:String) : Edge {
         return connections.find((x)->(x.target == this && x.name == relation));
     }
-    public inline function getIncomingNodes() : Iterable<Node> {
+    public inline function getIncomingNodes() : Array<Node> {
         return getIncomingEdges().map((x)->x.target);
     }
     public inline function getIncomingNode(relation: String) : Node {
@@ -132,10 +132,10 @@ class Node extends Element  {
         if (x == null) return null;
         return x.source;
     }
-    public function getIncomingNodesBy(relation: String) : Iterable<Node> {
+    public function getIncomingNodesBy(relation: String) : Array<Node> {
         return connections.filter((x)->(x.target == this && x.name == relation)).map((x)->x.source);
     }
-    public function getIncomingNodesByNot(relation: String) : Iterable<Node> {
+    public function getIncomingNodesByNot(relation: String) : Array<Node> {
         return connections.filter((x)->(x.target == this && x.name != relation)).map((x)->x.source);
     }
 
@@ -147,17 +147,17 @@ class Node extends Element  {
     inline function get_parent() return getParent();
 
 
-    public inline function getChildrenEdges() : Iterable<Edge> {
+    public inline function getChildrenEdges() : Array<Edge> {
         return getOutgoingEdgesBy(CHILD_RELATION);
     }
-    public inline function getChildrenNodes() : Iterable<Node> {
+    public inline function getChildrenNodes() : Array<Node> {
         return getOutgoingNodesBy(CHILD_RELATION);
     }
     // exclude hierarhcy
-    public inline function getNonChildrenOutgoingEdges() : Iterable<Edge> {
+    public inline function getNonChildrenOutgoingEdges() : Array<Edge> {
         return getOutgoingEdgesByNot(CHILD_RELATION);
     }
-    public inline function getNonChildrenOutgoingNodes() : Iterable<Node> {
+    public inline function getNonChildrenOutgoingNodes() : Array<Node> {
         return getOutgoingNodesByNot(CHILD_RELATION);
     }
     public function hasChildNamed(name:String) return connections.find((x) -> (x.source == this && x.name == CHILD_RELATION && x.target.name == name)) != null;
