@@ -632,7 +632,7 @@ class OpSplitEdge extends Operation {
 
 		newNode.x = (source.x + target.x) / 2;
 		newNode.y = (source.y + target.y) / 2;
-		
+
 		var newIncoming = incoming.generateEdge(matches, source, newNode, context);
 		var newOutgoing = outgoing.generateEdge(matches, newNode, target, context);
 
@@ -730,10 +730,21 @@ class OpAddEdge extends Operation {
 			return false;
 		}
 
-		edge.generateEdge(matches, sourceNode.node, targetNode.node, context);
+		var newEdge = edge.generateEdge(matches, sourceNode.node, targetNode.node, context);
 
+        if (_post != null){
+			_post(matches, newEdge, context);
+		}
+        
 		return true;
 	}
+
+	public function post(fn : ( MatchVector, Edge, MetaContext) -> Void) : OpAddEdge{
+		_post = fn;
+		return this;
+	}
+
+	var _post : ( MatchVector, Edge, MetaContext) -> Void;
 }
 
 class Rule {
@@ -836,7 +847,7 @@ class Rule {
 	}
 }
 
-typedef FitnessFn = (Graph) -> Float;
+typedef FitnessFn = (Graph) -> Null<Float>;
 
 class GraphRewriter {
 
@@ -874,10 +885,19 @@ class GraphRewriter {
                         e.remap(newGraph)
                     );
 					if (r.apply(v1, context)) {
-                        var score = fitness.fold((v,total) -> v(newGraph) + total, 0.0);
+                        var accum = 0.0;
+                        var valid = true;
+                        for (f in fitness) {
+                            var x = f(newGraph);
+                            if (x == null) {
+                                valid = false;
+                                break;
+                            }
+                            accum += x;
+                        }
                         //trace('Score is ${score} vs ${topScore}');
-                        if (score > topScore) {
-                            topScore = score;
+                        if (valid && accum > topScore) {
+                            topScore = accum;
                             topGraph = newGraph;
                             topOperation = r.operation;
                         }    
