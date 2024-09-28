@@ -125,7 +125,7 @@ class Node extends Element  {
         return connections.find((x)->(x.target == this && x.name == relation));
     }
     public inline function getIncomingNodes() : Array<Node> {
-        return getIncomingEdges().map((x)->x.target);
+        return getIncomingEdges().map((x)->x.source);
     }
     public inline function getIncomingNode(relation: String) : Node {
         var x = getIncomingEdge(relation);

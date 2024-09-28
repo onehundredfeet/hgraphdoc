@@ -7,90 +7,144 @@ using Lambda;
 typedef Graph = gdoc.NodeGraph;
 typedef GraphElement = gdoc.Element;
 
-enum EMatcher {
-	MatchNull;
-	MatchAny;
-	MatchString(string:String);
-	MatchInt(int:Int);
-	MatchRegex(regex:EReg);
-	MatchFn(fn:(Dynamic) -> Bool);
-	MatchNot(expr:Matcher);
-	MatchAnd(expr1:Matcher, expr2:Matcher);
-	MatchOr(expr1:Matcher, expr2:Matcher);
+class MatcherContext {
+	public function new( graph: Graph, pattern: Pattern, path: MatchVector) {
+        this.graph = graph;
+        this.pattern = pattern;
+        this.path = path;
+    }
+
+	public var graph:Graph;
+	public var pattern:Pattern;
+	public var subject:Element;
+	public var path:MatchVector;
 }
 
-abstract Matcher(EMatcher) from EMatcher{
-	public function match(value:Dynamic):Bool {
+typedef ValueMatchFn = (value:Dynamic, context:MatcherContext) -> Bool;
+typedef ElementMatchFn = (element:Element, context:MatcherContext) -> Bool;
+typedef NodeMatchFn = (node:Node, context:MatcherContext) -> Bool;
+typedef EdgeMatchFn = (edge:Edge, context:MatcherContext) -> Bool;
+
+enum EMatcher {
+	MNull;
+	MAny;
+	MNode;
+	MEdge;
+	MName(expr:Matcher);
+	MProperty(name:String, expr:Matcher);
+	MString(string:String);
+	MInt(int:Int);
+	MRegex(regex:EReg);
+	MValueFn(fn:ValueMatchFn);
+	MElementFn(fn:ElementMatchFn);
+	MNodeFn(fn:NodeMatchFn);
+	MEdgeFn(fn:EdgeMatchFn);
+	MNot(expr:Matcher);
+	MAnd(expr1:Matcher, expr2:Matcher);
+	MOr(expr1:Matcher, expr2:Matcher);
+	MNoDuplicates;
+    MNoConnected;
+}
+
+abstract Matcher(EMatcher) from EMatcher {
+	public function match(value:Dynamic, context:MatcherContext):Bool {
 		trace('match?');
 		switch (this) {
-			case MatchNull:
+			case MNull:
 				return value == null;
-			case MatchAny:
+			case MAny:
 				return true;
-			case MatchFn(f):
-				return f(value);
-			case MatchNot(expr):
-				//trace('not: ${!expr.match(value)}');
-				return !expr.match(value);
-			case MatchAnd(expr1, expr2):
-				return expr1.match(value) && expr2.match(value);
-			case MatchOr(expr1, expr2):
-				return expr1.match(value) || expr2.match(value);
-			default:
-		}
-
-		if (value is String) {
-			return matchString(value);
-		}
-		if (value is Int) {
-			switch (this) {
-				case MatchInt(i):
-					return i == value;
-				default:
-					return false;
-			}
-		}
-
-		return false;
-		
-	}
-
-	public function matchString(value:String):Bool {
-		switch (this) {
-			case MatchNull:
-				return value == null;
-			case MatchAny:
+			case MEdge:
+				return value is Edge;
+			case MNode:
+				return value is Node;
+			case MNoDuplicates:
+				if (value is Element) {
+					var element = cast(value, Element);
+					for (elementMatch in context.path) {
+						if (elementMatch.element == element) {
+							return false;
+						}
+					}
+				}
 				return true;
-			case MatchNot(expr):
-//				trace('not: ${value} -> ${!expr.matchString(value)}');
-				return !expr.matchString(value);
-			case MatchAnd(expr1, expr2):
-				return expr1.matchString(value) && expr2.matchString(value);
-			case MatchOr(expr1, expr2):
-				return expr1.matchString(value) || expr2.matchString(value);
-			case MatchString(s):
+			case MName(expr):
+				if (expr is Element) {
+					var element = cast(expr, Element);
+					return expr.match(element.name, context);
+				}
+				return false;
+			case MProperty(name, expr):
+				if (expr is Element) {
+					var element = cast(expr, Element);
+					return element.properties.exists(name) && expr.match(element.properties.get(name), context);
+				}
+				return false;
+			case MValueFn(f):
+				return f(value, context);
+			case MElementFn(fn):
+				if (value is Element) {
+					return fn(cast(value, Element), context);
+				}
+				return false;
+			case MNodeFn(fn):
+				if (value is Node) {
+					return fn(cast(value, Node), context);
+				}
+				return false;
+			case MEdgeFn(fn):
+				if (value is Edge) {
+					return fn(cast(value, Edge), context);
+				}
+				return false;
+			case MNot(expr):
+				// trace('not: ${!expr.match(value)}');
+				return !expr.match(value, context);
+			case MAnd(expr1, expr2):
+				return expr1.match(value, context) && expr2.match(value, context);
+			case MOr(expr1, expr2):
+				return expr1.match(value, context) || expr2.match(value, context);
+			case MString(s):
 				return s == value;
-			case MatchInt(i):
-				return value != null && Std.parseInt(value) == i;
-			case MatchRegex(r):
-				return value != null && r.match(value);
-			case MatchFn(f):
-				return f(value);
+			case MInt(i):
+				if (value is Int) {
+					return value == i;
+				}
+				if (value is String) {
+					return Std.parseInt(value) == i;
+				}
+				return false;
+			case MRegex(r):
+				if (value is String)
+					return value != null && r.match(value);
+				return false;
+            case MNoConnected:
+                if (value is Node) {
+                    var node = cast(value, Node);
+                    for (elementMatch in context.path) {
+                        if (elementMatch is NodeMatch) {
+                            var nodeMatch = cast(elementMatch, NodeMatch);
+                            if (node.isConnected(nodeMatch.node)) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
 		}
+
 		return false;
 	}
 }
 
 typedef PathMatchFn = (path:MatchVector) -> Bool;
-typedef NodeMatchFn = (pattern:NodePattern, path:MatchVector, source:Node) -> Bool;
-typedef EdgeMatchFn = (pattern:EdgePattern, path:MatchVector, source:Edge) -> EdgeMatch;
 
 abstract class ElementMatch {
 	public var element(get, never):GraphElement;
 
 	abstract function get_element():GraphElement;
 
-    public abstract function remap(g:Graph) : ElementMatch;
+	public abstract function remap(g:Graph):ElementMatch;
 }
 
 typedef MatchVector = Array<ElementMatch>;
@@ -105,15 +159,15 @@ class EdgeMatch extends ElementMatch {
 	function get_element():GraphElement {
 		return edge;
 	}
-    
-    function remap(g:Graph) : ElementMatch {
-        var newEdge = g.getEdgeFromID(edge.id);
-        //trace('Remapped edge ${edge.id} -> ${newEdge}');
-        var newSource : NodeMatch = source != null ? cast(source.remap(g), NodeMatch) : null;
-        var newTarget : NodeMatch = target != null ? cast( target.remap(g), NodeMatch) : null;
-        
-        return new EdgeMatch(newEdge, newSource, newTarget);
-    }
+
+	function remap(g:Graph):ElementMatch {
+		var newEdge = g.getEdgeFromID(edge.id);
+		// trace('Remapped edge ${edge.id} -> ${newEdge}');
+		var newSource:NodeMatch = source != null ? cast(source.remap(g), NodeMatch) : null;
+		var newTarget:NodeMatch = target != null ? cast(target.remap(g), NodeMatch) : null;
+
+		return new EdgeMatch(newEdge, newSource, newTarget);
+	}
 
 	public final edge:Edge;
 	public final source:NodeMatch;
@@ -130,111 +184,74 @@ class NodeMatch extends ElementMatch {
 		return node;
 	}
 
-    function remap(g:Graph) : ElementMatch {
-        var newNode = g.getNodeFromID(node.id);
+	function remap(g:Graph):ElementMatch {
+		var newNode = g.getNodeFromID(node.id);
 
-        if (edges == null) {
-            return new NodeMatch(newNode);
-        }
+		if (edges == null) {
+			return new NodeMatch(newNode);
+		}
 
-        var newEdges = new Map<String, EdgeMatch>();
+		var newEdges = new Map<String, EdgeMatch>();
 
-        for (e in edges.keyValueIterator()) {
-            var newEdge = cast(e.value.remap(g), EdgeMatch);
-            newEdges.set(e.key, newEdge);
-        }
-        
-        return new NodeMatch(newNode, newEdges);
-    }
+		for (e in edges.keyValueIterator()) {
+			var newEdge = cast(e.value.remap(g), EdgeMatch);
+			newEdges.set(e.key, newEdge);
+		}
+
+		return new NodeMatch(newNode, newEdges);
+	}
 
 	public final node:Node;
 	public var edges:Map<String, EdgeMatch>;
 }
 
 abstract class Pattern {
-	public var user:Dynamic;
-	public var name:Matcher;
-	public var properties:Map<String, Matcher>;
-	public var predicate:PathMatchFn;
+	public var predicates:Array<Matcher>;
 
-	abstract function matchElement(previous:MatchVector, candidate:GraphElement):ElementMatch;
+	abstract function matchElement(candidate:GraphElement, context: MatcherContext):ElementMatch;
 
 	public function noDuplicates():Pattern {
 		_noDuplicates = true;
 		return this;
 	}
 
+	public function addPredicate(predicate:Matcher) {
+		predicates.push(predicate);
+        return this;
+	}
+    
+
 	var _noDuplicates:Bool = false;
 }
 
 class NodePattern extends Pattern {
-	public function new(name:Matcher = null, properties:Map<String, Matcher> = null, user:Dynamic = null, edges:Map<String, EdgePattern> = null) {
-		this.name = name;
-		this.properties = properties;
-		this.user = user;
+	public function new(predicates: Array<Matcher>, edges:Map<String, EdgePattern> = null) {
 		this.edges = edges;
-
+        this.predicates = predicates;
 	}
 
-	public function matchFn(fn:NodeMatchFn):NodePattern {
-		this.fn = fn;
-		trace('Fn ${fn}');
-		return this;
-	}
-	public var fn:NodeMatchFn;
 	public var edges:Map<String, EdgePattern>;
 
 	public function noConnections():NodePattern {
-		_onlyUnconnected = true;
+		addPredicate(MNoConnected);
 		return this;
 	}
 
-	var _onlyUnconnected:Bool = false;
-
-	public function matchElement(path:MatchVector, candidateElement:GraphElement):ElementMatch {
+	public function matchElement(candidateElement:GraphElement, context: MatcherContext):ElementMatch {
 		if (candidateElement is Node) {
-			return matchNode(path, cast candidateElement);
+			return matchNode(cast candidateElement, context);
 		}
 		return null;
 	}
 
-	public function matchNode(path:MatchVector, candidateNode:Node):NodeMatch {
-		if (predicate != null) {
-			if (!predicate(path)) {
-				return null;
-			}
-		}
-
-		if (_onlyUnconnected || _noDuplicates) {
-			for (p in path) {
-				if (p is NodeMatch) {
-					var nodeMatch = cast p, NodeMatch;
-					if (_noDuplicates && nodeMatch.node == candidateNode) {
-						return null;
-					}
-					if (_onlyUnconnected && nodeMatch.node.isConnected(candidateNode)) {
-						return null;
-					}
-				}
-			}
-		}
-
-		if (fn != null && !fn(this, path, candidateNode)) {
-            return null;
-		}
-
-		if (name != null && !name.matchString(candidateNode.name)) {
-			//trace('Rejecting ${candidateNode.name}');
-			return null;
-		}
-		//trace('Accepting ${candidateNode.name}');
-		if (properties != null) {
-			for (prop in properties.keyValueIterator()) {
-				if (!candidateNode.properties.exists(prop.key) || !prop.value.match(candidateNode.properties.get(prop.key))) {
-					return null;
-				}
-			}
-		}
+    
+	public function matchNode( candidateNode:Node, context: MatcherContext):NodeMatch {
+		for (predicate in predicates) {
+            if (!predicate.match(candidateNode,context)) {
+                return null;
+            }
+        }
+        
 		if (edges != null) {
 			var edgeMatches = new Map<String, EdgeMatch>();
 			for (edgePattern in edges.keyValueIterator()) {
@@ -254,7 +271,7 @@ class NodePattern extends Pattern {
 							break;
 					}
 
-					var edgeMatch = edgePattern.value.matchEdge(path, candidate);
+					var edgeMatch = edgePattern.value.matchEdge(candidate, context);
 					if (edgeMatch != null) {
 						break;
 					}
@@ -267,6 +284,7 @@ class NodePattern extends Pattern {
 			}
 			return new NodeMatch(candidateNode, edgeMatches);
 		}
+        
 		return new NodeMatch(candidateNode);
 	}
 }
@@ -278,15 +296,11 @@ enum EDirection {
 }
 
 class EdgePattern extends Pattern {
-	public function new(direction:EDirection = DirAny, name:Matcher = null, properties:Map<String, Matcher> = null, fn:EdgeMatchFn = null,
-			user:Dynamic = null, source:NodePattern = null, target:NodePattern = null) {
-		this.name = name;
-		this.properties = properties;
-		this.fn = fn;
-		this.user = user;
+	public function new(predicates: Array<Matcher>, direction = EDirection.DirAny, source:NodePattern = null, target:NodePattern = null) {
 		this.source = source;
 		this.target = target;
 		this.direction = direction;
+        this.predicates = predicates;
 	}
 
 	public var fn:EdgeMatchFn;
@@ -294,36 +308,27 @@ class EdgePattern extends Pattern {
 	public var target:NodePattern;
 	public var direction:EDirection;
 
-	public function matchElement(path:Array<ElementMatch>, candidateElement:GraphElement):ElementMatch {
+	public function edgeMatchFn(fn:EdgeMatchFn):EdgePattern {
+		this.fn = fn;
+		return this;
+	}
+
+	public function matchElement( candidateElement:GraphElement, context:MatcherContext):ElementMatch {
 		if (candidateElement is Edge) {
-			return matchEdge(path, cast candidateElement);
+			return matchEdge( cast candidateElement, context);
 		}
 		return null;
 	}
 
-	public function matchEdge(path:Array<ElementMatch>, candidateEdge:Edge):EdgeMatch {
-		if (predicate != null) {
-			if (!predicate(path)) {
-				return null;
-			}
-		}
-
-		if (fn != null) {
-			return fn(this, path, candidateEdge);
-		}
-		if (name != null && !name.matchString(candidateEdge.name)) {
-			return null;
-		}
-		if (properties != null) {
-			for (prop in properties.keyValueIterator()) {
-				if (!candidateEdge.properties.exists(prop.key) || !prop.value.match(candidateEdge.properties.get(prop.key))) {
-					return null;
-				}
-			}
-		}
+	public function matchEdge(candidateEdge:Edge, context:MatcherContext):EdgeMatch {
+		for (predicate in predicates) {
+            if (!predicate.match(candidateEdge, context)) {
+                return null;
+            }
+        }
 		var sourceMatch:NodeMatch = null;
 		if (source != null) {
-			sourceMatch = source.matchNode(path, candidateEdge.source);
+			sourceMatch = source.matchNode(candidateEdge.source, context);
 			if (sourceMatch == null) {
 				return null;
 			}
@@ -333,7 +338,7 @@ class EdgePattern extends Pattern {
 
 		var targetMatch:NodeMatch = null;
 		if (target != null) {
-			targetMatch = target.matchNode(path, candidateEdge.target);
+			targetMatch = target.matchNode(candidateEdge.target, context);
 			if (targetMatch == null) {
 				return null;
 			}
@@ -556,7 +561,7 @@ abstract class Operation {
 		return _next = next;
 	}
 
-	var _next:Operation;      
+	var _next:Operation;
 }
 
 class OpMutateEdge extends Operation {
@@ -637,21 +642,21 @@ class OpSplitEdge extends Operation {
 		var newOutgoing = outgoing.generateEdge(matches, newNode, target, context);
 
 		context.graph.removeEdge(edge);
-//        trace('-------after edge removal');
-  //      trace(NodeGraphPrinter.graphToString(context.graph));
-        
-		if (_post != null){
+		//        trace('-------after edge removal');
+		//      trace(NodeGraphPrinter.graphToString(context.graph));
+
+		if (_post != null) {
 			_post(matches, newNode, context);
 		}
 		return true;
 	}
 
-	public function post(fn : ( MatchVector, Node, MetaContext) -> Void) : OpSplitEdge{
+	public function post(fn:(MatchVector, Node, MetaContext) -> Void):OpSplitEdge {
 		_post = fn;
 		return this;
 	}
 
-	var _post : ( MatchVector, Node, MetaContext) -> Void;
+	var _post:(MatchVector, Node, MetaContext) -> Void;
 }
 
 class OpAddNode extends Operation {
@@ -677,28 +682,29 @@ class OpAddNode extends Operation {
 		var newNode = node.generateNode(matches, context);
 		edge.generateEdge(matches, nodeMatch.node, newNode, context);
 
-		if (_post != null){
+		if (_post != null) {
 			_post(matches, newNode, context);
 		}
 
 		return true;
 	}
 
-	public function post(fn : ( MatchVector, Node, MetaContext) -> Void) : OpAddNode{
+	public function post(fn:(MatchVector, Node, MetaContext) -> Void):OpAddNode {
 		_post = fn;
 		return this;
 	}
 
-	var _post : ( MatchVector, Node, MetaContext) -> Void;
+	var _post:(MatchVector, Node, MetaContext) -> Void;
 }
-
 
 class OpNop extends Operation {
-    public function new() {}
-    public function apply(matches:MatchVector, context:MetaContext) {
-        return true;
-    }
+	public function new() {}
+
+	public function apply(matches:MatchVector, context:MetaContext) {
+		return true;
+	}
 }
+
 class OpAddEdge extends Operation {
 	public function new(edge:MetaEdge) {
 		this.edge = edge;
@@ -708,21 +714,20 @@ class OpAddEdge extends Operation {
 
 	public function apply(matches:Array<ElementMatch>, context:MetaContext) {
 		if (matches == null || matches.length == 0) {
-            trace('OpAddEdge - No matches');
+			trace('OpAddEdge - No matches');
 			return false;
 		}
 		if (matches[0] is EdgeMatch || matches[1] is EdgeMatch) {
-            trace('OpAddEdge - matches are edges');
+			trace('OpAddEdge - matches are edges');
 
 			return false;
 		}
-        
 
 		var sourceNode = cast(matches[0], NodeMatch);
 		var targetNode = cast(matches[1], NodeMatch);
 
 		if (sourceNode == targetNode) {
-            trace('OpAddEdge - targets are the same');
+			trace('OpAddEdge - targets are the same');
 			return false;
 		}
 
@@ -732,19 +737,19 @@ class OpAddEdge extends Operation {
 
 		var newEdge = edge.generateEdge(matches, sourceNode.node, targetNode.node, context);
 
-        if (_post != null){
+		if (_post != null) {
 			_post(matches, newEdge, context);
 		}
-        
+
 		return true;
 	}
 
-	public function post(fn : ( MatchVector, Edge, MetaContext) -> Void) : OpAddEdge{
+	public function post(fn:(MatchVector, Edge, MetaContext) -> Void):OpAddEdge {
 		_post = fn;
 		return this;
 	}
 
-	var _post : ( MatchVector, Edge, MetaContext) -> Void;
+	var _post:(MatchVector, Edge, MetaContext) -> Void;
 }
 
 class Rule {
@@ -756,13 +761,14 @@ class Rule {
 	public var patterns:Array<Pattern>;
 	public var operation:Operation;
 
-	function getElementsMatchingPath(path:MatchVector, pattern:Pattern, graph:Graph):Array<ElementMatch> {
+	function getMatchingElements(path:MatchVector, pattern:Pattern, graph:Graph):Array<ElementMatch> {
 		var matches:Array<ElementMatch> = [];
-
+        var context = new MatcherContext(graph, pattern, path);
 		if (pattern is NodePattern) {
 			var nodePattern = cast(pattern, NodePattern);
 			for (n in graph.nodes) {
-				var match = nodePattern.matchNode(path, n);
+                context.subject = n;
+				var match = nodePattern.matchNode(n, context);
 				if (match != null) {
 					matches.push(match);
 				}
@@ -771,7 +777,8 @@ class Rule {
 		} else {
 			var edgePattern = cast(pattern, EdgePattern);
 			for (e in graph.edges) {
-				var match = edgePattern.matchEdge(path, e);
+                context.subject = e;
+				var match = edgePattern.matchEdge( e, context);
 				if (match != null) {
 					matches.push(match);
 				}
@@ -789,11 +796,11 @@ class Rule {
 		var pattern = patterns[0];
 		var rest = patterns.slice(1);
 
-		//trace('Looking for pattern ${pattern}');
+		// trace('Looking for pattern ${pattern}');
 		for (v in variations) {
-			var elements = getElementsMatchingPath(v, pattern, graph);
+			var elements = getMatchingElements(v, pattern, graph);
 			if (elements != null && elements.length > 0) {
-				//trace('Found with v ${v} : ${elements.length} elements ${elements}');
+				// trace('Found with v ${v} : ${elements.length} elements ${elements}');
 				for (e in elements) {
 					var newVariation = v.slice(0);
 					newVariation.push(e);
@@ -814,7 +821,7 @@ class Rule {
 		var rest = patterns.slice(1);
 
 		for (v in variations) {
-			var elements = getElementsMatchingPath(v, pattern, graph);
+			var elements = getMatchingElements(v, pattern, graph);
 			if (elements != null && elements.length > 0) {
 				for (e in elements) {
 					var newVariation = v.slice(0);
@@ -850,7 +857,6 @@ class Rule {
 typedef FitnessFn = (Graph) -> Null<Float>;
 
 class GraphRewriter {
-
 	public static function applyFirst(graph:Graph, rules:Array<Rule>, user:Dynamic) {
 		var context = new MetaContext(graph, user);
 		context.graph = graph;
@@ -871,44 +877,42 @@ class GraphRewriter {
 		context.graph = graph;
 		var topScore = Math.NEGATIVE_INFINITY;
 		var topGraph:Graph = null;
-        var topOperation : Operation = null;
+		var topOperation:Operation = null;
 
 		for (r in rules) {
 			var ruleVariations = r.findAllVariations(graph);
 			if (ruleVariations != null) {
-                //trace('ruleVariations: $ruleVariations');
+				// trace('ruleVariations: $ruleVariations');
 				for (v in ruleVariations) {
 					var newGraph = graph.clone();
 					context.graph = newGraph;
 
-                    var v1 = v.map((e) -> return
-                        e.remap(newGraph)
-                    );
+					var v1 = v.map((e) -> return e.remap(newGraph));
 					if (r.apply(v1, context)) {
-                        var accum = 0.0;
-                        var valid = true;
-                        for (f in fitness) {
-                            var x = f(newGraph);
-                            if (x == null) {
-                                valid = false;
-                                break;
-                            }
-                            accum += x;
-                        }
-                        //trace('Score is ${score} vs ${topScore}');
-                        if (valid && accum > topScore) {
-                            topScore = accum;
-                            topGraph = newGraph;
-                            topOperation = r.operation;
-                        }    
-                    }
+						var accum = 0.0;
+						var valid = true;
+						for (f in fitness) {
+							var x = f(newGraph);
+							if (x == null) {
+								valid = false;
+								break;
+							}
+							accum += x;
+						}
+						// trace('Score is ${score} vs ${topScore}');
+						if (valid && accum > topScore) {
+							topScore = accum;
+							topGraph = newGraph;
+							topOperation = r.operation;
+						}
+					}
 				}
 			}
 		}
 
-        if (topOperation != null) {
-            trace('TOP OPERATION ${topOperation}');
-        }
+		if (topOperation != null) {
+			trace('TOP OPERATION ${topOperation}');
+		}
 		return topGraph;
 	}
 }

@@ -116,9 +116,9 @@ class Main {
             trace(NodeGraphPrinter.graphToString(rewriteGraph));
 
 			var rules = [
-				new Rule([new EdgePattern(DirAny, MatchAny)], new OpSplitEdge(new MetaEdge(MStrLiteral("incoming")), new MetaEdge(MStrLiteral("outgoing")), new MetaNode(MStrLiteral("split")))),
-                new Rule([new NodePattern(MatchString("Start"))], new OpAddNode(new MetaEdge(MStrLiteral("NewStartExtension")),new MetaNode(MStrLiteral("NewExpansion")))),
-                new Rule([new NodePattern(MatchString("End"))], new OpAddNode(new MetaEdge(MStrLiteral("NewEndExtension")),new MetaNode(MStrLiteral("NewEndExpansion")))),
+				new Rule([new EdgePattern([], DirAny)], new OpSplitEdge(new MetaEdge(MStrLiteral("incoming")), new MetaEdge(MStrLiteral("outgoing")), new MetaNode(MStrLiteral("split")))),
+                new Rule([new NodePattern([MString("Start")])], new OpAddNode(new MetaEdge(MStrLiteral("NewStartExtension")),new MetaNode(MStrLiteral("NewExpansion")))),
+                new Rule([new NodePattern([MString("End")])], new OpAddNode(new MetaEdge(MStrLiteral("NewEndExtension")),new MetaNode(MStrLiteral("NewEndExpansion")))),
 			];
 
             var out = GraphRewriter.applyBest(rewriteGraph, rules, [(_)-> return Seedy.random() * 10]);
