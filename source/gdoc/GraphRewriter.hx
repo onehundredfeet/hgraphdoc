@@ -48,7 +48,6 @@ enum EMatcher {
 
 abstract Matcher(EMatcher) from EMatcher {
 	public function match(value:Dynamic, context:MatcherContext):Bool {
-		trace('match?');
 		switch (this) {
 			case MNull:
 				return value == null;

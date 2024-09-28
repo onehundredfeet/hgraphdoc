@@ -13,11 +13,9 @@ class Element {
     public var properties = new StringMap<Dynamic>();
     public var name : String;
     public var id(default, null) : Int;
-    public var user : Dynamic;
 
     function cloneTo( other : Element) {
         id = other.id;
-        user = other.user;
         other.name = name;
         for (prop in properties.keyValueIterator()) {
             other.properties.set(prop.key, prop.value);
