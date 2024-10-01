@@ -1,4 +1,5 @@
 --class-path source
---main test.Main
+--main test.GraphMain
 --library seedyrng
+--library hvector
 -hl bin/test.hl

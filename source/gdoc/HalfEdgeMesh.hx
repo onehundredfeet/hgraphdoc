@@ -124,7 +124,7 @@ class HalfEdgeMesh {
         var vertexToDualFace = new Map<HalfEdgeVertex, HalfEdgeFace>();
         var halfEdgeToDualHalfEdge = new Map<HalfEdge, HalfEdge>();
 
-        // Step 1: Create dual vertices for each face
+        // Create dual vertices for each face
         for (f in faces) {
             var centroidX:Float = 0;
             var centroidY:Float = 0;
@@ -145,21 +145,21 @@ class HalfEdgeMesh {
             faceToDualVertex.set(f, dualVertex);
         }
 
-        // Step 2: Create dual faces for each vertex
+        // Create dual faces for each vertex
         for (v in vertices) {
             var dualFace = new HalfEdgeFace();
             dualMesh.faces.push(dualFace);
             vertexToDualFace.set(v, dualFace);
         }
 
-        // Step 3: Create dual half-edges
+        // Create dual half-edges
         for (he in edges) {
             var dualHe = new HalfEdge();
             dualMesh.edges.push(dualHe);
             halfEdgeToDualHalfEdge.set(he, dualHe);
         }
 
-        // Step 4: Set up dual half-edges
+        // Set up dual half-edges
         for (he in edges) {
             var dualHe = halfEdgeToDualHalfEdge.get(he);
 
@@ -187,7 +187,7 @@ class HalfEdgeMesh {
             }
         }
 
-        // Step 5: Assign half-edges to dual faces
+        //  Assign half-edges to dual faces
         for (v in vertices) {
             var dualFace = vertexToDualFace.get(v);
             var startHe = v.edge;
@@ -210,7 +210,7 @@ class HalfEdgeMesh {
             } while (edge != null && edge != startHe);
         }
 
-        // Step 6: Assign half-edges to dual vertices
+        // Assign half-edges to dual vertices
         for (f in faces) {
             var dualVertex = faceToDualVertex.get(f);
             dualVertex.edge = halfEdgeToDualHalfEdge.get(f.edge);

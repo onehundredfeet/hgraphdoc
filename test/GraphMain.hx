@@ -14,10 +14,13 @@ import gdoc.NodeGraphPrinter;
 import gdoc.HalfEdgeMesh;
 import gdoc.QuickHull3D;
 import gdoc.Point3D;
+import gdoc.Point2D;
+import gdoc.PowerDiagram;
+import gdoc.WeightedPoint2D;
 
 using Lambda;
 
-class Main {
+class GraphMain {
 	static function main() {
 		var doc = gdoc.VisioImport.loadAsGraphDoc("data/tests.vdx");
 
@@ -178,38 +181,133 @@ class Main {
         //     }
         // }
 
-        runQuickHullTests();
+       testTetrahedron();
+       testCube();
+       testOctahedron();
+       testCoplanarPoints();
+       testColinearPoints();
+       testDuplicatePoints();
+       testRandomPointCloud();
+       testLargeDataset();
+       powerTestEquilateralTriangle();
+
+       testSquareEqualWeights();
+       testSquareRandomWeights();
     }
 
-    private static function runQuickHullTests():Void {
-        trace("Running Comprehensive Tests for QuickHull3D Implementation\n");
+    static var passedTests = 0;
+    static var failedTests = 0;
 
-        // Test 1: Tetrahedron
-        testTetrahedron();
-
-        // Test 2: Cube
-        testCube();
-
-        // Test 3: Octahedron
-        testOctahedron();
-
-        // Test 4: Coplanar Points
-        testCoplanarPoints();
-
-        // Test 5: Colinear Points
-        testColinearPoints();
-
-        // Test 6: Duplicate Points
-        testDuplicatePoints();
-
-        // Test 7: Random Point Cloud
-        testRandomPointCloud();
-
-        // Test 8: Large Dataset
-        testLargeDataset();
-
-        trace("\nAll tests completed.");
+    private static function logResult(testName:String, passed:Bool, message:String = ""):Void {
+        if (passed) {
+            trace("PASS: " + testName);
+            passedTests++;
+        } else {
+            trace("FAIL: " + testName + (message != "" ? " - " + message : ""));
+            failedTests++;
+        }
     }
+
+    
+    public static function powerTestEquilateralTriangle():Void {
+        var testName = "Equilateral Triangle with Equal Weights";
+        try {
+            var points2D = [
+                WeightedPoint2D.fromPoint2D(new Point2D(0, 0), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, 0), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(0.5, Math.sqrt(3)/2), 1)
+            ];
+            var cells = PowerDiagram.computeCells(points2D, new Point2D(-0.5, -0.5), new Point2D(1.5, 1.5));
+            // Expected: Each cell should correspond to one point
+            var expectedCells = 3;
+            var keys = [for (k in cells.keys()) k];
+            var actualCells = keys.length;
+            var pass1 = Assert.assertEquals(expectedCells, actualCells, "Number of cells should be " + expectedCells);
+            
+            // Additional check: Each cell should have at least one dual vertex
+            var pass2 = true;
+            for (cell in cells) {
+                if (cell.length < 1) {
+                    pass2 = false;
+                    break;
+                }
+            }
+            var pass = pass1 && pass2;
+            logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
+        } catch (e:String) {
+            logResult(testName, false, "Exception occurred: " + e);
+        }
+    }
+
+     public static function testSquareEqualWeights():Void {
+        var testName = "Square with Equal Weights";
+        try {
+            var points2D = [
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, -1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, -1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, 1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), 1)
+            ];
+            var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+            var expectedCells = 4;
+            var actualCells = [for (k in cells.keys()) k ];
+            var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
+
+
+            trace ('Cells: ${cells}');
+            // Check that each cell has at least one dual vertex
+            var pass2 = true;
+            for (cell in cells) {
+                if (cell.length < 1) {
+                    pass2 = false;
+                    break;
+                }
+            }
+            var pass = pass1 && pass2;
+
+           
+			SVGGenerate.writePowerDiagram("pd_equal.svg", cells, points2D);
+
+            logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
+        } catch (e:String) {
+            logResult(testName, false, "Exception occurred: " + e);
+        }
+    }
+
+    public static function testSquareRandomWeights():Void {
+        var random = new seedyrng.Random(Int64.make(123456789, 987654321));
+        var testName = "Square with Random Weights";
+        try {
+            var points2D = [
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, -1), random.random() * 3.0 + 0.5),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, -1), random.random() * 3.0 + 0.5),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, 1), random.random() * 3.0 + 0.5),
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), random.random() * 3.0 + 0.5)
+            ];
+            var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+            var expectedCells = 4;
+            var actualCells = [for (k in cells.keys()) k ];
+            var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
+
+            trace ('Cells: ${cells}');
+            // Check that each cell has at least one dual vertex
+            var pass2 = true;
+            for (cell in cells) {
+                if (cell.length < 1) {
+                    pass2 = false;
+                    break;
+                }
+            }
+            var pass = pass1 && pass2;
+
+			SVGGenerate.writePowerDiagram("pd_random.svg", cells, points2D);
+
+            logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
+        } catch (e:String) {
+            logResult(testName, false, "Exception occurred: " + e);
+        }
+    }
+
 
     // Test 1: Tetrahedron
     private static function testTetrahedron():Void {

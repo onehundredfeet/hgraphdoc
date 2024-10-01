@@ -1,8 +1,5 @@
 package gdoc;
 
-#if hvector
-typedef Point3D = hvector.Float3;
-#else
 class Point3D {
     public var x:Float;
     public var y:Float;
@@ -20,19 +17,36 @@ class Point3D {
     public function toString():String {
         return 'Point3D(' + x + ', ' + y + ', ' + z + ')';
     }
+
+   
+
 }
-#end
 
+function areCoplanar(p1:Point3D, p2:Point3D, p3:Point3D, p4:Point3D):Bool {
+    var v1x:Float = p2.x - p1.x;
+    var v1y:Float = p2.y - p1.y;
+    var v1z:Float = p2.z - p1.z;
 
-function areCoplanar(a:Point3D, b:Point3D, c:Point3D, d:Point3D):Bool {
-    var u = new Point3D(b.x - a.x, b.y - a.y, b.z - a.z);
-    var v = new Point3D(c.x - a.x, c.y - a.y, c.z - a.z);
-    var w = new Point3D(d.x - a.x, d.y - a.y, d.z - a.z);
-    var nx = u.y * v.z - u.z * v.y;
-    var ny = u.z * v.x - u.x * v.z;
-    var nz = u.x * v.y - u.y * v.x;
-    var dotProduct = nx * w.x + ny * w.y + nz * w.z;
-    return Math.abs(dotProduct) < 1e-6;
+    var v2x:Float = p3.x - p1.x;
+    var v2y:Float = p3.y - p1.y;
+    var v2z:Float = p3.z - p1.z;
+
+    var v3x:Float = p4.x - p1.x;
+    var v3y:Float = p4.y - p1.y;
+    var v3z:Float = p4.z - p1.z;
+
+    // cross product v2 × v3
+    var crossX:Float = v2y * v3z - v2z * v3y;
+    var crossY:Float = v2z * v3x - v2x * v3z;
+    var crossZ:Float = v2x * v3y - v2y * v3x;
+
+    //dot product v1 * (v2 × v3)
+    var scalarTripleProduct:Float = v1x * crossX + v1y * crossY + v1z * crossZ;
+
+    final epsilon:Float = 1e-12; // 64 bit floating point precision
+
+    // If the absolute value of the scalar triple product is less than epsilon, points are coplanar
+    return Math.abs(scalarTripleProduct) < epsilon;
 }
 
 function computeCentroid(vertices:Array<Point3D>):Point3D {

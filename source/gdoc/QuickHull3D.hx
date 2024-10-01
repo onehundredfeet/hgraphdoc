@@ -55,9 +55,9 @@ class QuickHull3D {
 	function get_faces() {
 		return hull.faces;
 	}
-
 	// points are assumed to be unique
 	public function new(points:Array<Point3D>) {
+        
 		hull = new FaceMesh3D(points);
 		vertexMap = hull.makeVertexIndexMap();
 
@@ -124,57 +124,76 @@ class QuickHull3D {
 
 	private function findInitialTetrahedron() {
 		var points = hull.vertices;
-		// Find extreme points
-		var minX = points[0];
-		var maxX = points[0];
-		var minY = points[0];
-		var maxY = points[0];
-		var minZ = points[0];
-		var maxZ = points[0];
+        var vertices:Array<Point3D> ;
+        if (points.length > 4) {
+            vertices = [];
 
-		for (p in points) {
-			if (p.x < minX.x)
-				minX = p;
-			if (p.x > maxX.x)
-				maxX = p;
-			if (p.y < minY.y)
-				minY = p;
-			if (p.y > maxY.y)
-				maxY = p;
-			if (p.z < minZ.z)
-				minZ = p;
-			if (p.z > maxZ.z)
-				maxZ = p;
-		}
+            // Find extreme points
+            var minX = points[0];
+            var maxX = points[0];
+            var minY = points[0];
+            var maxY = points[0];
+            var minZ = points[0];
+            var maxZ = points[0];
 
-		// Create initial simplex
-		var simplex = [minX, maxX, minY, maxY, minZ, maxZ];
-		var vertices:Array<Point3D> = [];
-		var found = false;
+            for (p in points) {
+                if (p.x < minX.x)
+                    minX = p;
+                if (p.x > maxX.x)
+                    maxX = p;
+                if (p.y < minY.y)
+                    minY = p;
+                if (p.y > maxY.y)
+                    maxY = p;
+                if (p.z < minZ.z)
+                    minZ = p;
+                if (p.z > maxZ.z)
+                    maxZ = p;
+            }
 
-		for (i in 0...simplex.length) {
-			for (j in i + 1...simplex.length) {
-				for (k in j + 1...simplex.length) {
-					for (l in k + 1...simplex.length) {
-						vertices = [simplex[i], simplex[j], simplex[k], simplex[l]];
-						if (!areCoplanar(vertices[0], vertices[1], vertices[2], vertices[3])) {
-							found = true;
-							break;
-						}
-					}
-					if (found)
-						break;
-				}
-				if (found)
-					break;
-			}
-			if (found)
-				break;
-		}
+            // Create initial simplex
+            var simplexCandidates = [minX, maxX, minY, maxY, minZ, maxZ];
+            var simplex = [];
+            for (c in simplexCandidates) {
+                if (!simplex.contains(c)) {
+                    simplex.push(c);
+                }
+            }
+            if (simplex.length < 4) {
+                throw 'Not enough distinct exterme points ${simplex}.';
+            }
 
-		if (!found) {
-			throw 'Cannot find initial tetrahedron: all points may be coplanar.';
-		}
+            var found = false;
+
+            for (i in 0...simplex.length) {
+                for (j in i + 1...simplex.length) {
+                    for (k in j + 1...simplex.length) {
+                        for (l in k + 1...simplex.length) {
+                            vertices = [simplex[i], simplex[j], simplex[k], simplex[l]];
+                            if (!areCoplanar(vertices[0], vertices[1], vertices[2], vertices[3])) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found)
+                            break;
+                    }
+                    if (found)
+                        break;
+                }
+                if (found)
+                    break;
+            }
+
+            if (!found) {
+                throw 'Cannot find initial tetrahedron: all points may be coplanar.';
+            }
+        } else {
+            vertices = points;
+            if (areCoplanar(vertices[0], vertices[1], vertices[2], vertices[3])) {
+                throw 'Cannot find initial tetrahedron: all points may be coplanar.';
+            }
+        }
 
 		// Create faces of the tetrahedron
 		hull.addFace(vertices[0], vertices[1], vertices[2]);
@@ -371,4 +390,38 @@ class QuickHull3D {
 			}
 		}
 	}
+
+    public function asTriangleIndices(transFaces: Array<FaceMesh3DFace>):Array<Int> {
+
+        if (transFaces == null) transFaces = hull.faces;
+        var indices : Array<Int> = [];
+
+        for (face in transFaces) {
+            if (face.vertices.length != 3) {
+                throw 'Face ${face} is not a triangle';
+            }
+            indices.push(vertexMap.get(face.vertices[0]));
+            indices.push(vertexMap.get(face.vertices[1]));
+            indices.push(vertexMap.get(face.vertices[2]));
+        }
+        return indices;
+    }
+
+    public function getUsedVerticesByIndex():Array<Int> {
+        var indices : Array<Int> = [];
+        var visted = new Map<Point3D, Bool>();
+        
+        function visit(v:Point3D) {
+            if (!visted.exists(v)) {
+                visted.set(v, true);
+                indices.push(vertexMap.get(v));
+            }
+        }
+        for (face in hull.faces) {
+            for (v in face.vertices) {
+                visit(v);
+            }   
+        }
+        return indices;
+    }
 }
