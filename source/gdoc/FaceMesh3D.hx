@@ -164,6 +164,7 @@ class FaceMesh3D{
                 return true;
             }
             if (isPointAbovePlane(face.normal, face.vertices[0], point)) {
+                //trace('Failed by ${face.distanceToPoint(point)}');
                 return false;
             }
         }

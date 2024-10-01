@@ -25,14 +25,14 @@ class PowerDiagram {
 		];
 	}
 
-	static final INSIGNIFICANT_PERTURBATION = 0; // 1e-4;
+
 
 	private static function createBoundaryPoints(min:Point2D, max:Point2D):Array<WeightedPoint2D> {
 		return [
-			WeightedPoint2D.fromPoint2D(new Point2D(min.x, min.y), 0.0), // Bottom-left
-			WeightedPoint2D.fromPoint2D(new Point2D(max.x, min.y), 0.0), // Bottom-right
-			WeightedPoint2D.fromPoint2D(new Point2D(max.x, max.y), 0.0), // Top-right
-			WeightedPoint2D.fromPoint2D(new Point2D(min.x, max.y), 0.0) // Top-left
+			WeightedPoint2D.fromPoint2D(new Point2D(min.x, min.y), 0), // Bottom-left
+			WeightedPoint2D.fromPoint2D(new Point2D(max.x, min.y), 0), // Bottom-right
+			WeightedPoint2D.fromPoint2D(new Point2D(max.x, max.y), 0), // Top-right
+			WeightedPoint2D.fromPoint2D(new Point2D(min.x, max.y), 0) // Top-left
 		];
 	}
 
@@ -79,9 +79,13 @@ class PowerDiagram {
 			throw 'At least four points are required to compute a Power Diagram.';
 		}
 
+        var range = max.x - min.x;
+
+        static final INSIGNIFICANT_PERTURBATION =  1e-6;
+
 		inline function liftAndPerturb(p:WeightedPoint2D, i:Int):Point3D {
 			var lifted = p.lift();
-			lifted.z += INSIGNIFICANT_PERTURBATION * random.random(); // Minimal perturbation
+			lifted.z += INSIGNIFICANT_PERTURBATION * random.random() * range; // Minimal perturbation
 			return lifted;
 		}
 
@@ -104,8 +108,6 @@ class PowerDiagram {
 
 		// Get convex hull point indices
 		var convexHullIndices = quickHull.getUsedVerticesByIndex();
-
-		trace('convexHullIndices: ${convexHullIndices}');
 
 		for (i in 0...faceCount) {
 			var index = i * 3;
@@ -162,7 +164,6 @@ class PowerDiagram {
 			cells.remove(i);
 		}
 
-		trace('Cell keys ${[for (k in cells.keys()) k]}');
 		for (pair in cells.keyValueIterator()) {
 			var pointIndex = pair.key;
 			var cell = pair.value;
@@ -181,14 +182,11 @@ class PowerDiagram {
 				uniqueCell = Clipping2D.clipPolygon(uniqueCell, bb);
 				sortInPlace(uniqueCell, new Point2D(origin.x, origin.y));
 				cells.set(pointIndex, uniqueCell);
-			} else {
-				trace('Bounded cell detected for point ' + pointIndex);
-			}
+			} 
 		}
 
 		// Remove boundary points from cells
 		for (i in boundaryStartIndex...liftedPoints.length) {
-			// trace('Removing boundary point at index ' + i);
 			cells.remove(i);
 		}
 		return cells;

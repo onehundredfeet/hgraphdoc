@@ -142,7 +142,7 @@ class SVGGenerate {
 
         function drawNode2D( node : Node, attr : SVGNodeAttributes) {
             attr.x = (node.x - min_x) * uni_scale + margin;
-            attr.y = height - ((node.y - min_y) * uni_scale + margin);
+            attr.y = (node.y - min_y) * uni_scale + margin;
             
             attr.r = 1.0;
             attr.fill = "lightblue";
@@ -154,7 +154,7 @@ class SVGGenerate {
             }
             attr.r = attr.r * uni_scale;
 
-            svgContent.add('<circle cx="${attr.x}" cy="${attr.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+            svgContent.add('<circle cx="${attr.x}" cy="${height - attr.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
 
             for (connection in node.getNonChildrenOutgoingEdges()) {
                 var target = cast(connection.target, Node);
@@ -168,14 +168,14 @@ class SVGGenerate {
                 delta_y /= length;
 
                 var x0 = attr.x + delta_x * attr.r* 1.5;
-                var y0 = height - (attr.y + delta_y * attr.r* 1.5);
+                var y0 = attr.y + delta_y * attr.r* 1.5;
                 var x1 = target_x - delta_x * attr.r * 1.5;
-                var y1 = height - (target_y - delta_y * attr.r* 1.5);
-                svgContent.add('<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="black" marker-end="url(#arrow)" />\n');
+                var y1 = target_y - delta_y * attr.r* 1.5;
+                svgContent.add('<line x1="${x0}" y1="${height - y0}" x2="${x1}" y2="${height - y1}" stroke="black" marker-end="url(#arrow)" />\n');
             }
             
             if (attr.text != null) {
-                svgContent.add('<text x="${attr.x}" y="${attr.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
+                svgContent.add('<text x="${attr.x}" y="${height - (attr.y + 5)}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
             }
 
             if (attr.recursive && node.hasChildren()) {

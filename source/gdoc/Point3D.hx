@@ -75,25 +75,27 @@ function computeNormal(a:Point3D, b:Point3D, c:Point3D):Point3D {
     nz /= length;
     return new Point3D(nx, ny, nz);
 }
-
+final EPSILON = 1e-9;
 function isPointAbovePlane(normal:Point3D, origin:Point3D,point:Point3D):Bool {
     var dx = point.x - origin.x;
     var dy = point.y - origin.y;
     var dz = point.z - origin.z;
     var dotProduct = normal.x * dx + normal.y * dy + normal.z * dz;
-    return dotProduct > 0;
+    return dotProduct > -EPSILON;
 }
 
 function pointToPlaneDistance(normal:Point3D, origin:Point3D, point:Point3D):Float {
     var dx = point.x - origin.x;
     var dy = point.y - origin.y;
     var dz = point.z - origin.z;
+
     var numerator = Math.abs(normal.x * dx + normal.y * dy + normal.z * dz);
     var denominator = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+
     return numerator / denominator;
 }
 
-final   EPSILON = 1e-6;
+
 
 function areColinear(a:Point3D, b:Point3D, c:Point3D):Bool {
     // Compute components of vectors ab and ac

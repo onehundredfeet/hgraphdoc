@@ -76,7 +76,7 @@ class QuickHull3D {
 		for (point in hull.vertices) {
 			if (!hull.isPointInside(point)) {
                 if (hullPoints.exists(point)) {
-                    throw 'Point ${point} is already in the hull';
+                    throw 'Point ${point} is already in the hull, but outside hull ${hull.faces}?';
                 }
 				remainingPoints.push(point);
 			}
@@ -116,8 +116,6 @@ class QuickHull3D {
 			if (!processedFaces.exists(face)) {
 				addPointsToHull(face, facePointMap, processedFaces);
                 iterator = facePointMap.keys();
-
-                //trace('Next? ${iterator.hasNext()}');
 			}
 		}
 	}
@@ -125,34 +123,60 @@ class QuickHull3D {
 	private function findInitialTetrahedron() {
 		var points = hull.vertices;
         var vertices:Array<Point3D> ;
+
         if (points.length > 4) {
+			final MIN_X = 0;
+			final MIN_Y = 1;
+			final MIN_Z = 2;
+			final MAX_X = 3;
+			final MAX_Y = 4;
+			final MAX_Z = 5;
+			var extremePoints = [for (i in 0...6) new Array<Point3D>()];
+			var extremeValues = [];
             vertices = [];
 
             // Find extreme points
-            var minX = points[0];
-            var maxX = points[0];
-            var minY = points[0];
-            var maxY = points[0];
-            var minZ = points[0];
-            var maxZ = points[0];
+			
+            extremeValues[MIN_X] = Math.POSITIVE_INFINITY;
+            extremeValues[MIN_Y] = Math.POSITIVE_INFINITY;
+            extremeValues[MIN_Z] = Math.POSITIVE_INFINITY;
+			extremeValues[MAX_X] = Math.NEGATIVE_INFINITY;
+			extremeValues[MAX_Y] = Math.NEGATIVE_INFINITY;
+			extremeValues[MAX_Z] = Math.NEGATIVE_INFINITY;
 
             for (p in points) {
-                if (p.x < minX.x)
-                    minX = p;
-                if (p.x > maxX.x)
-                    maxX = p;
-                if (p.y < minY.y)
-                    minY = p;
-                if (p.y > maxY.y)
-                    maxY = p;
-                if (p.z < minZ.z)
-                    minZ = p;
-                if (p.z > maxZ.z)
-                    maxZ = p;
+				var values = [p.x, p.y, p.z, p.x, p.y, p.z];
+
+				for (i in 0...3) {
+					if (values[i] < extremeValues[i]) {
+						extremeValues[i] = values[i];
+						extremePoints[i] = [p];
+					} else {
+						if (values[i] == extremeValues[i]) {
+							extremePoints[i].push(p);
+						}
+					}
+				}
+				for (i in 3...6) {
+					if (values[i] > extremeValues[i]) {
+						extremeValues[i] = values[i];
+						extremePoints[i] = [p];
+					} else {
+						if (values[i] == extremeValues[i]) {
+							extremePoints[i].push(p);
+						}
+					}
+				}
             }
 
             // Create initial simplex
-            var simplexCandidates = [minX, maxX, minY, maxY, minZ, maxZ];
+            var simplexCandidates = [];
+			for (i in 0...6) {
+				for (p in extremePoints[i]) {
+					simplexCandidates.push(p);
+				}
+			}
+
             var simplex = [];
             for (c in simplexCandidates) {
                 if (!simplex.contains(c)) {
@@ -165,28 +189,31 @@ class QuickHull3D {
 
             var found = false;
 
+			var maxDistance = EPSILON;
+			var maxSet = [];
+
             for (i in 0...simplex.length) {
                 for (j in i + 1...simplex.length) {
                     for (k in j + 1...simplex.length) {
                         for (l in k + 1...simplex.length) {
-                            vertices = [simplex[i], simplex[j], simplex[k], simplex[l]];
-                            if (!areCoplanar(vertices[0], vertices[1], vertices[2], vertices[3])) {
-                                found = true;
-                                break;
-                            }
+                            var testVerts = [simplex[i], simplex[j], simplex[k], simplex[l]];
+
+							var dist = Math.abs(pointToPlaneDistance(computeNormal(testVerts[0], testVerts[1], testVerts[2]), testVerts[0], testVerts[3]));
+							if (dist > maxDistance) {
+								maxDistance = dist;
+								maxSet = testVerts;
+								found = true;
+							}
+                            
                         }
-                        if (found)
-                            break;
                     }
-                    if (found)
-                        break;
                 }
-                if (found)
-                    break;
             }
 
+			vertices = maxSet;
+
             if (!found) {
-                throw 'Cannot find initial tetrahedron: all points may be coplanar.';
+                throw 'Cannot find initial tetrahedron: all points may be coplanar. ${points}';
             }
         } else {
             vertices = points;
@@ -224,13 +251,10 @@ class QuickHull3D {
 		}
 		var face = hull.addFace(a, b, c);
 
-		// trace('Adding face ${face} - testing against point ${testPoint}');
 		if (face.isPointAbove(hullCentroid)) {
-			//  trace('\tFlipping face');
 			face.flip();
 		}
 
-		// trace('Checking non-manifold geometry');
 		// test for non-manifold geometry
 		hull.makeEdgeMap(vertexMap);
 
@@ -243,9 +267,7 @@ class QuickHull3D {
 		// Remove points that are already in the hull
 		points = points.filter(function(p) return !hullPoints.exists(p));
 
-		// trace('Adding points to hull for face ${face} : ${points}');
 		if (points == null || points.length == 0) {
-//            trace('No points to add to hull for face ${face}');
 			processedFaces.set(face, true);
 			return;
 		}

@@ -193,6 +193,8 @@ class GraphMain {
 
        testSquareEqualWeights();
        testSquareRandomWeights();
+       testFiveEqualWeights();
+       randomEqualWeights();
     }
 
     static var passedTests = 0;
@@ -301,6 +303,81 @@ class GraphMain {
             var pass = pass1 && pass2;
 
 			SVGGenerate.writePowerDiagram("pd_random.svg", cells, points2D);
+
+            logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
+        } catch (e:String) {
+            logResult(testName, false, "Exception occurred: " + e);
+        }
+    }
+
+    public static function testFiveEqualWeights():Void {
+        var testName = "Five with Equal Weights";
+        try {
+            var points2D = [
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, -1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, -1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(0, 0), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(1, 1), 1),
+                WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), 1)
+            ];
+            var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+            var expectedCells = points2D.length;
+            var actualCells = [for (k in cells.keys()) k ];
+            var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
+
+
+            trace ('Cells: ${cells}');
+            // Check that each cell has at least one dual vertex
+            var pass2 = true;
+            for (cell in cells) {
+                if (cell.length < 1) {
+                    pass2 = false;
+                    break;
+                }
+            }
+            var pass = pass1 && pass2;
+
+           
+			SVGGenerate.writePowerDiagram("five_equal.svg", cells, points2D);
+
+            logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
+        } catch (e:String) {
+            logResult(testName, false, "Exception occurred: " + e);
+        }
+    }
+
+    public static function randomEqualWeights():Void {
+        var testName = "Random with Equal Weights";
+        try {
+            var rand = new Random(Int64.make(334343, 124544));
+
+            var count = rand.randomInt(10, 20);
+
+            var points2D = [];
+            for (i in 0...count) {
+                points2D.push(new WeightedPoint2D(rand.random() * 10 - 5, rand.random() * 10 - 5, 1));
+            }
+
+
+            var cells = PowerDiagram.computeCells(points2D, new Point2D(-10.0, -10.0), new Point2D(10.0, 10.0));
+            var expectedCells = points2D.length;
+            var actualCells = [for (k in cells.keys()) k ];
+            var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
+
+
+            trace ('Cells: ${cells}');
+            // Check that each cell has at least one dual vertex
+            var pass2 = true;
+            for (cell in cells) {
+                if (cell.length < 1) {
+                    pass2 = false;
+                    break;
+                }
+            }
+            var pass = pass1 && pass2;
+
+           
+			SVGGenerate.writePowerDiagram("random_equal.svg", cells, points2D);
 
             logResult(testName, pass, pass ? "" : "One or more cells have no dual vertices.");
         } catch (e:String) {
