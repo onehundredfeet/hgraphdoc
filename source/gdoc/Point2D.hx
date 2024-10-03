@@ -23,6 +23,22 @@ class Point2D {
             this.y /= length;
         }
     }
+
+    public function distanceTo(p:Point2D):Float {
+        return Math.sqrt(Math.pow(this.x - p.x, 2) + Math.pow(this.y - p.y, 2));
+    }
+
+    // returns positive if p3 is to the left of the line p1->p2
+    public static inline function orientation(p1:Point2D, p2:Point2D, p3:Point2D):Float {
+        return (p2.x - p1.x) * (p3.y - p1.y) - 
+               (p2.y - p1.y) * (p3.x - p1.x);
+    }
+
+    public function eqval( p:Point2D, epsilon:Float = 1e-12):Bool {
+        return Math.abs(this.x - p.x) < epsilon && Math.abs(this.y - p.y) < epsilon;
+    }
+
+    
 }
 
 

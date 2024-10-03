@@ -1,25 +1,22 @@
 package gdoc;
 
-class HalfEdgeVertex {
-    public var x:Float;
-    public var y:Float;
-    public var edge:HalfEdge; // An outgoing half-edge from this vertex
+class HalfEdge2DVertex2D extends Point2D{
+    public var edge:HalfEdge2D; // An outgoing half-edge from this vertex
     public var index:Int;     // Unique identifier for the vertex
 
     public function new(x:Float, y:Float, index:Int) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.edge = null;
         this.index = index;
     }
 }
 
-class HalfEdge {
-    public var vertex:HalfEdgeVertex;     // Vertex at the start of this half-edge
-    public var face:HalfEdgeFace;         // Face this half-edge borders
-    public var next:HalfEdge;     // Next half-edge around the face
-    public var prev:HalfEdge;     // Previous half-edge around the face (added)
-    public var opposite:HalfEdge; // Opposite half-edge (twin)
+class HalfEdge2D {
+    public var vertex:HalfEdge2DVertex2D;     // Vertex at the start of this half-edge
+    public var face:HalfEdgeFace2D;         // Face this half-edge borders
+    public var next:HalfEdge2D;     // Next half-edge around the face
+    public var prev:HalfEdge2D;     // Previous half-edge around the face (added)
+    public var opposite:HalfEdge2D; // Opposite half-edge (twin)
 
     public function new() {
         this.vertex = null;
@@ -30,47 +27,47 @@ class HalfEdge {
     }
 }
 
-class HalfEdgeFace {
-    public var edge:HalfEdge; // One of the half-edges bordering this face
+class HalfEdgeFace2D {
+    public var edge:HalfEdge2D; // One of the half-edges bordering this face
 
     public function new() {
         this.edge = null;
     }
 }
 
-class HalfEdgeMesh {
-    public var vertices:Array<HalfEdgeVertex>;
-    public var edges:Array<HalfEdge>;
-    public var faces:Array<HalfEdgeFace>;
+class HalfEdgeMesh2D {
+    public var vertices:Array<HalfEdge2DVertex2D>;
+    public var edges:Array<HalfEdge2D>;
+    public var faces:Array<HalfEdgeFace2D>;
 
     public function new() {
-        vertices = new Array<HalfEdgeVertex>();
-        edges = new Array<HalfEdge>();
-        faces = new Array<HalfEdgeFace>();
+        vertices = new Array<HalfEdge2DVertex2D>();
+        edges = new Array<HalfEdge2D>();
+        faces = new Array<HalfEdgeFace2D>();
     }
 
     private var _nextID:Int = 0; // For assigning unique indices to vertices
     // Map to find matching half-edges using integer keys
     // Ensure that vertex indices are within 16-bit limits (0 to 65535)
-    private var _edgeMap = new Map<Int, HalfEdge>();
+    private var _edgeMap = new Map<Int, HalfEdge2D>();
 
     // Adds a vertex to the mesh and returns its index
-    public function addVertex(x:Float, y:Float):HalfEdgeVertex {
-        var vertex = new HalfEdgeVertex(x, y, _nextID++);
+    public function addVertex(x:Float, y:Float):HalfEdge2DVertex2D {
+        var vertex = new HalfEdge2DVertex2D(x, y, _nextID++);
         vertices.push(vertex);
         return vertex;
     }
 
-    public function addFace(vertexes:Array<HalfEdgeVertex>) {
-        var face = new HalfEdgeFace();
+    public function addFace(vertexes:Array<HalfEdge2DVertex2D>) {
+        var face = new HalfEdgeFace2D();
         faces.push(face);
     
         var numVertices = vertexes.length;
-        var faceEdges:Array<HalfEdge> = [];
+        var faceEdges:Array<HalfEdge2D> = [];
     
         // Create half-edges for the face
         for (i in 0...numVertices) {
-            var he = new HalfEdge();
+            var he = new HalfEdge2D();
             edges.push(he);
             faceEdges.push(he);
             he.face = face;
@@ -116,13 +113,13 @@ class HalfEdgeMesh {
 
 
     // Computes the dual of the mesh
-    public function computeDual():HalfEdgeMesh {
-        var dualMesh = new HalfEdgeMesh();
+    public function computeDual():HalfEdgeMesh2D {
+        var dualMesh = new HalfEdgeMesh2D();
 
         // Maps to keep track of associations between original and dual elements
-        var faceToDualVertex = new Map<HalfEdgeFace, HalfEdgeVertex>();
-        var vertexToDualFace = new Map<HalfEdgeVertex, HalfEdgeFace>();
-        var halfEdgeToDualHalfEdge = new Map<HalfEdge, HalfEdge>();
+        var faceToDualVertex = new Map<HalfEdgeFace2D, HalfEdge2DVertex2D>();
+        var vertexToDualFace = new Map<HalfEdge2DVertex2D, HalfEdgeFace2D>();
+        var halfEdgeToDualHalfEdge2D = new Map<HalfEdge2D, HalfEdge2D>();
 
         // Create dual vertices for each face
         for (f in faces) {
@@ -147,21 +144,21 @@ class HalfEdgeMesh {
 
         // Create dual faces for each vertex
         for (v in vertices) {
-            var dualFace = new HalfEdgeFace();
+            var dualFace = new HalfEdgeFace2D();
             dualMesh.faces.push(dualFace);
             vertexToDualFace.set(v, dualFace);
         }
 
         // Create dual half-edges
         for (he in edges) {
-            var dualHe = new HalfEdge();
+            var dualHe = new HalfEdge2D();
             dualMesh.edges.push(dualHe);
-            halfEdgeToDualHalfEdge.set(he, dualHe);
+            halfEdgeToDualHalfEdge2D.set(he, dualHe);
         }
 
         // Set up dual half-edges
         for (he in edges) {
-            var dualHe = halfEdgeToDualHalfEdge.get(he);
+            var dualHe = halfEdgeToDualHalfEdge2D.get(he);
 
             // The dual half-edge's vertex corresponds to the face of the original half-edge
             dualHe.vertex = faceToDualVertex.get(he.face);
@@ -171,19 +168,19 @@ class HalfEdgeMesh {
 
             // Set the opposite half-edge
             if (he.opposite != null) {
-                dualHe.opposite = halfEdgeToDualHalfEdge.get(he.opposite);
+                dualHe.opposite = halfEdgeToDualHalfEdge2D.get(he.opposite);
             }
 
             // Set the next half-edge (reverse traversal)
             var prevOpposite = he.prev.opposite;
             if (prevOpposite != null) {
-                dualHe.next = halfEdgeToDualHalfEdge.get(prevOpposite);
+                dualHe.next = halfEdgeToDualHalfEdge2D.get(prevOpposite);
             }
 
             // Set the prev half-edge
             var nextOpposite = he.next.opposite;
             if (nextOpposite != null) {
-                dualHe.prev = halfEdgeToDualHalfEdge.get(nextOpposite);
+                dualHe.prev = halfEdgeToDualHalfEdge2D.get(nextOpposite);
             }
         }
 
@@ -192,11 +189,11 @@ class HalfEdgeMesh {
             var dualFace = vertexToDualFace.get(v);
             var startHe = v.edge;
             var edge = startHe;
-            var firstDualHe:HalfEdge = null;
+            var firstDualHe:HalfEdge2D = null;
 
             do {
                 var he = edge;
-                var dualHe = halfEdgeToDualHalfEdge.get(he);
+                var dualHe = halfEdgeToDualHalfEdge2D.get(he);
 
                 if (firstDualHe == null) {
                     dualFace.edge = dualHe;
@@ -213,15 +210,15 @@ class HalfEdgeMesh {
         // Assign half-edges to dual vertices
         for (f in faces) {
             var dualVertex = faceToDualVertex.get(f);
-            dualVertex.edge = halfEdgeToDualHalfEdge.get(f.edge);
+            dualVertex.edge = halfEdgeToDualHalfEdge2D.get(f.edge);
         }
 
         return dualMesh;
     }
 
     // Static function to generate a Voronoi diagram
-        public static function generateVoronoi(points:Array<{x:Float, y:Float}>, bounds:{minX:Float, maxX:Float, minY:Float, maxY:Float}):HalfEdgeMesh {
-            var delaunayMesh = new HalfEdgeMesh();
+        public static function generateVoronoi(points:Array<{x:Float, y:Float}>, bounds:{minX:Float, maxX:Float, minY:Float, maxY:Float}):HalfEdgeMesh2D {
+            var delaunayMesh = new HalfEdgeMesh2D();
     
             // Create a super-triangle that contains all the points
             var dx = bounds.maxX - bounds.minX;
@@ -239,7 +236,7 @@ class HalfEdgeMesh {
             delaunayMesh.addFace([v0, v1, v2]);
     
             // Map to store point to vertex index
-            var pointToVertex = new Map<{x:Float, y:Float}, HalfEdgeVertex>();
+            var pointToVertex = new Map<{x:Float, y:Float}, HalfEdge2DVertex2D>();
     
             // Insert each point into the triangulation
             for (p in points) {
@@ -292,7 +289,7 @@ class HalfEdgeMesh {
         }
     
         // Helper function to check if a point is inside the circumcircle of a face
-        private static function circumcircleContains(face:HalfEdgeFace, point:HalfEdgeVertex):Bool {
+        private static function circumcircleContains(face:HalfEdgeFace2D, point:HalfEdge2DVertex2D):Bool {
             var a = face.edge.vertex;
             var b = face.edge.next.vertex;
             var c = face.edge.next.next.vertex;
@@ -312,11 +309,11 @@ class HalfEdgeMesh {
             
     
         // Removes a face from the mesh
-        function removeFace(face:HalfEdgeFace):Void {
+        function removeFace(face:HalfEdgeFace2D):Void {
             faces.remove(face);
         
             // Collect all half-edges associated with the face
-            var edgesToRemove:Array<HalfEdge> = [];
+            var edgesToRemove:Array<HalfEdge2D> = [];
             var startEdge = face.edge;
             var edge = startEdge;
             do {
@@ -360,10 +357,10 @@ class HalfEdgeMesh {
             }
         }
         
-        function removeFaceAndVerts(face:HalfEdgeFace):Void {
+        function removeFaceAndVerts(face:HalfEdgeFace2D):Void {
 
             // Keep track of vertices that may become isolated
-            var verticesToCheck:Array<HalfEdgeVertex> = new Array<HalfEdgeVertex>();
+            var verticesToCheck:Array<HalfEdge2DVertex2D> = new Array<HalfEdge2DVertex2D>();
             var startEdge = face.edge;
             var edge = startEdge;
             do {
@@ -383,7 +380,7 @@ class HalfEdgeMesh {
         }
     
         // Removes faces that use any of the specified vertices
-        private function removeFacesUsingVertices(verticesToRemove:Array<HalfEdgeVertex>):Void {
+        private function removeFacesUsingVertices(verticesToRemove:Array<HalfEdge2DVertex2D>):Void {
             var facesToRemove = [];
             for (face in faces) {
                 var usesVertex = false;
