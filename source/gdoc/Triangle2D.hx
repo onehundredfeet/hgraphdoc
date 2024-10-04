@@ -15,9 +15,9 @@ class Triangle2D {
 		return [new Edge2D(a, b), new Edge2D(b, c), new Edge2D(c, a)];
 	}
 
-	public inline function containsPoint(point:Point2D):Bool {
-		return triangleContainsPoint(point, a, b, c);
-	}
+	// public inline function containsPoint(point:Point2D):Bool {
+	// 	return triangleContainsPoint(point, a, b, c);
+	// }
 
 	public static function triangleContainsPoint(point:Point2D, a:Point2D, b:Point2D, c:Point2D):Bool {
 		var b1 = Point2D.orientation(a, b, point) < 0.0;
@@ -25,6 +25,33 @@ class Triangle2D {
 		var b3 = Point2D.orientation(c, a, point) < 0.0;
 		return ((b1 == b2) && (b2 == b3));
 	}
+
+    static inline final EPSILON = 1e-12;
+
+    public function isDegenerate():Bool {
+        return Math.abs((b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y)) < EPSILON;
+    }
+
+    public function containsPoint(p: Point2D): Bool {
+        var x = p.x;
+        var y = p.y;
+        var x1 = this.a.x;
+        var y1 = this.a.y;
+        var x2 = this.b.x;
+        var y2 = this.b.y;
+        var x3 = this.c.x;
+        var y3 = this.c.y;
+        
+        var denom = (y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3);
+        if (denom == 0) {
+            return false; // Degenerate triangle
+        }
+        var a = ((y2 - y3)*(x - x3) + (x3 - x2)*(y - y3)) / denom;
+        var b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denom;
+        var c = 1 - a - b;
+        
+        return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+    }
 
 	public function toString():String {
 		return 'Triangle2D(${a}, ${b}, ${c})';

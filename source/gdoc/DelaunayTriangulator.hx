@@ -9,6 +9,9 @@ class DelaunayTriangulator {
 		}
 
 		var superTri = createSuperTriangle(points);
+        if (superTri == null) {
+            return [];
+        }
 		triangles.push(superTri);
 
 		// Insert each point into the triangulation
@@ -110,6 +113,9 @@ class DelaunayTriangulator {
 			tri = new Triangle2D(p1, p3, p2);
 		}
 
+        if (tri.isDegenerate()) {
+            return null;
+        }
 		for (p in points) {
 			if (!tri.containsPoint(p)) {
 				throw('Super triangle does not contain all points ${tri} -> ${p}');

@@ -39,17 +39,18 @@ class Point2D {
     }
 
     
-}
 
 
-
-function computeCentroid2D(vertices:Array<Point2D>):Point2D {
-    var x = 0.0;
-    var y = 0.0;
-    for (v in vertices) {
-        x += v.x;
-        y += v.y;
+    public static function computeCentroid2D(vertices:Array<Point2D>):Point2D {
+        var x = 0.0;
+        var y = 0.0;
+        for (v in vertices) {
+            x += v.x;
+            y += v.y;
+        }
+        var n = vertices.length;
+        return new Point2D(x / n, y / n);
     }
-    var n = vertices.length;
-    return new Point2D(x / n, y / n);
+
 }
+

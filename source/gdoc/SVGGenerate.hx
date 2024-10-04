@@ -17,7 +17,10 @@ class SVGNodeAttributes {
 }
 
 class Frame {
-    public function new() {
+    public function new(width : Float = 1000.0, height : Float = 1000.0, margin : Float = 100.0) {
+        this.width = width;
+        this.height = height;
+        this.margin = margin;
 
     }
     public var width : Float;
@@ -51,35 +54,60 @@ class SVGGenerate {
         File.saveContent(path, svgContent.toString());
     }
 
+    public static function writePointField(path : String,field:PointField2D, frame: Frame = null) {
+        var svgContent = startSVG(); 
+        var bounds = Rect2D.infiniteEmpty();
+
+        bounds.expandToIncludePoints(field);
+        frame = getFrameOrDefault(frame);
+
+        var range_x = bounds.width;
+        var range_y = bounds.height;
+        var x_scale = (frame.width - 2 * frame.margin) / (range_x);
+        var y_scale = (frame.height - 2 * frame.margin) / (range_y);
+        var uni_scale = x_scale < y_scale ? x_scale : y_scale;
+
+        var attr = new SVGNodeAttributes();
+
+        attr.r = Math.min(range_x, range_y) / 50.0;
+        attr.fill = "lightblue";
+        attr.stroke = "black";
+        attr.recursive = true;
+        attr.r = attr.r * uni_scale;
+
+        for (point in field) {
+            var x = (point.x - bounds.xmin) * uni_scale + frame.margin;
+            var y = frame.height - ((point.y - bounds.ymin) * uni_scale + frame.margin);
+            svgContent.add('<circle cx="${x}" cy="${y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+        }
+
+        finishSVG(path, svgContent);
+    }
+
+    static function getFrameOrDefault(frame: Frame) {
+        if (frame == null) {
+            frame = new Frame();
+        }
+        return frame;
+    }
+
     public static function writePowerDiagram(path : String,diagram: Map<Int, PowerCell>, centers : Array<WeightedPoint2D>, frame: Frame = null) {
         var svgContent = startSVG(); 
         
         var attr = new SVGNodeAttributes();
 
-        // compute frame
-        var min_x = 100000.0;
-        var min_y = 100000.0;
-        var max_x = -100000.0;
-        var max_y = -100000.0;
+        var bounds = Rect2D.infiniteEmpty();
 
         for (cell in diagram) {
-            for (p in cell) {
-                if (p.x < min_x) min_x = p.x;
-                if (p.y < min_y) min_y = p.y;
-                if (p.x > max_x) max_x = p.x;
-                if (p.y > max_y) max_y = p.y;    
-            }
+            bounds.expandToIncludePoints(cell);
         }
 
-        var range_x = max_x - min_x;
-        var range_y = max_y - min_y;
+        frame = getFrameOrDefault(frame);
 
-        var margin = frame != null ? frame.margin : 100.0;
-        var width = frame != null ? frame.width : 1000.0;
-        var height = frame != null ? frame.height : 1000.0;
-
-        var x_scale = (width - 2 * margin) / (range_x);
-        var y_scale = (height - 2 * margin) / (range_y);
+        var range_x = bounds.width;
+        var range_y = bounds.height;
+        var x_scale = (frame.width - 2 * frame.margin) / (range_x);
+        var y_scale = (frame.height - 2 * frame.margin) / (range_y);
         var uni_scale = x_scale < y_scale ? x_scale : y_scale;
 
         attr.r = Math.min(range_x, range_y) / 20.0;
@@ -89,8 +117,8 @@ class SVGGenerate {
         attr.r = attr.r * uni_scale;
 
         function transformPoint( p : Point2D) : Point2D {
-            var x = (p.x - min_x) * uni_scale + margin;
-            var y = height - ((p.y - min_y) * uni_scale + margin);
+            var x = (p.x - bounds.xmin) * uni_scale + frame.margin;
+            var y = frame.height - ((p.y - bounds.ymin) * uni_scale + frame.margin);
             return new Point2D(x, y);
         }
         for (cell in diagram.keyValueIterator()) {

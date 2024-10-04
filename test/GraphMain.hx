@@ -1,5 +1,6 @@
 package test;
 
+import gdoc.Polygon2D;
 import haxe.Int64;
 import gdoc.FaceMesh3D.FaceMesh3DFace;
 import seedyrng.Seedy;
@@ -19,6 +20,7 @@ import gdoc.WeightedPoint2D;
 import gdoc.EarClipping;
 import gdoc.Triangle2D;
 import gdoc.DelaunayTriangulator;
+import gdoc.TriangleFilter;
 
 using Lambda;
 
@@ -208,17 +210,27 @@ class GraphMain {
 		testPolygonWithDuplicatePoints();
 		testDegeneratePolygons();
 
-        dttestPointInCircumcircle();
-        dttestTriangleEquality();
-        dttestSimpleTriangle();
-        dttestConvexSquare();
-        dttestConvexPentagon();
-        dttestConcavePolygon();
-        dttestRandomPointCloud();
-        dttestColinearPoints();
-        dttestDuplicatePoints();
-        dttestDegenerateCases();
+		dttestPointInCircumcircle();
+		dttestTriangleEquality();
+		dttestSimpleTriangle();
+		dttestConvexSquare();
+		dttestConvexPentagon();
+		dttestConcavePolygon();
+		dttestRandomPointCloud();
+		dttestColinearPoints();
+		dttestDuplicatePoints();
+		dttestDegenerateCases();
 
+		tftestTrianglesCompletelyInsidePolygon();
+		tftestTrianglesPartiallyOverlappingPolygon();
+		tftestTrianglesCompletelyOutsidePolygon();
+		tftestTrianglesSharingEdgesWithPolygon();
+		tftestTrianglesWithMultiplePolygons();
+		tftestDegenerateTriangles();
+
+        pftestGenerateEdgePoints();
+        pftestGenerateInteriorPoints();
+        pftestGeneratePointField();
 	}
 
 	static var passedTests = 0;
@@ -741,33 +753,30 @@ class GraphMain {
 	/**
 	 * Test triangulation of a polygon with duplicate consecutive points.
 	 */
-static function testPolygonWithDuplicatePoints():Void {
-        trace("Running EarClipping testPolygonWithDuplicatePoints...");
-        var polygon = [
-            new Point2D(0, 0),
-            new Point2D(2, 0),
-            new Point2D(2, 0), // Duplicate point
-            new Point2D(2, 2),
-            new Point2D(0, 2)
-        ];
-        
-        var triangles = EarClipping.triangulate(polygon);
-        
-        // After removing duplicate, it's a pentagon with 5 vertices, expecting 3 triangles
-        Assert.assertEquals(2, triangles.length, "Polygon with Duplicate Points: Incorrect number of triangles");
-        
-        // Verify total area
-        var cleanedPolygon = removeDuplicatePoints(polygon);
-        var polygonArea = computePolygonArea(cleanedPolygon);
-        var totalTriArea = 0.0;
-        for (tri in triangles) {
-            totalTriArea += computeTriangleArea(tri);
-        }
-        Assert.assertTrue(
-            Math.abs(polygonArea - totalTriArea) < 1e-4,
-            "Polygon with Duplicate Points: Total triangle area does not match polygon area"
-        );
-    }
+	static function testPolygonWithDuplicatePoints():Void {
+		trace("Running EarClipping testPolygonWithDuplicatePoints...");
+		var polygon = [
+			new Point2D(0, 0),
+			new Point2D(2, 0),
+			new Point2D(2, 0), // Duplicate point
+			new Point2D(2, 2),
+			new Point2D(0, 2)
+		];
+
+		var triangles = EarClipping.triangulate(polygon);
+
+		// After removing duplicate, it's a pentagon with 5 vertices, expecting 3 triangles
+		Assert.assertEquals(2, triangles.length, "Polygon with Duplicate Points: Incorrect number of triangles");
+
+		// Verify total area
+		var cleanedPolygon = removeDuplicatePoints(polygon);
+		var polygonArea = computePolygonArea(cleanedPolygon);
+		var totalTriArea = 0.0;
+		for (tri in triangles) {
+			totalTriArea += computeTriangleArea(tri);
+		}
+		Assert.assertTrue(Math.abs(polygonArea - totalTriArea) < 1e-4, "Polygon with Duplicate Points: Total triangle area does not match polygon area");
+	}
 
 	/**
 	 * Test triangulation of degenerate polygons.
@@ -846,296 +855,589 @@ static function testPolygonWithDuplicatePoints():Void {
 		return cleaned;
 	}
 
-    
-    static function dtcreateTriangle(a:Point2D, b:Point2D, c:Point2D):Triangle2D {
-        var tri = new Triangle2D(a, b, c);
-        if (!tri.isCounterClockwise()) {
-            tri = new Triangle2D(a, c, b);
-        }
-        return tri;
-    }
+	static function dtcreateTriangle(a:Point2D, b:Point2D, c:Point2D):Triangle2D {
+		var tri = new Triangle2D(a, b, c);
+		if (!tri.isCounterClockwise()) {
+			tri = new Triangle2D(a, c, b);
+		}
+		return tri;
+	}
 
-    static function dttestPointInCircumcircle():Void {
-        trace("Running DelaunayTriangulator dttestPointInCircumcircle...");
-        var p1 = new Point2D(0, 0);
-        var p2 = new Point2D(4, 0);
-        var p3 = new Point2D(2, 3);
-        var tri = new Triangle2D(p1, p2, p3);
+	static function dttestPointInCircumcircle():Void {
+		trace("Running DelaunayTriangulator dttestPointInCircumcircle...");
+		var p1 = new Point2D(0, 0);
+		var p2 = new Point2D(4, 0);
+		var p3 = new Point2D(2, 3);
+		var tri = new Triangle2D(p1, p2, p3);
+
+		var insidePoint = new Point2D(2, 1);
+		var outsidePoint = new Point2D(2, 4);
+
+		Assert.assertTrue(tri.circumCircleContains(insidePoint), "Point should be inside the circumcircle");
+		Assert.assertTrue(!tri.circumCircleContains(outsidePoint), "Point should be outside the circumcircle");
+	}
+
+	/**
+	 * Test the eqval function for Triangle2D.
+	 */
+	static function dttestTriangleEquality():Void {
+		trace("Running DelaunayTriangulator testTriangleEquality...");
+
+		var p1 = new Point2D(0, 0);
+		var p2 = new Point2D(1, 0);
+		var p3 = new Point2D(0, 1);
+		var p4 = new Point2D(1, 1);
+
+		// Create triangles with consistent CCW orientation
+		var tri1 = dtcreateTriangle(p1, p2, p3); // (0,0), (1,0), (0,1)
+		var tri2 = dtcreateTriangle(p2, p3, p1); // Cyclic permutation
+		var tri3 = dtcreateTriangle(p3, p1, p2); // Cyclic permutation
+		var tri4 = dtcreateTriangle(p1, p3, p2); // Should be reordered to CCW
+
+		// Assert equality
+		Assert.assertTrue(tri1.eqvalCCW(tri2), "tri1 should equal tri2");
+		Assert.assertTrue(tri1.eqvalCCW(tri3), "tri1 should equal tri3");
+		Assert.assertTrue(tri1.eqvalCCW(tri4), "tri1 should equal tri4 after orientation correction");
+
+		// Create a different triangle
+		var tri5 = dtcreateTriangle(p1, p2, p4); // Different set of vertices
+		Assert.assertTrue(!tri1.eqvalCCW(tri5), "tri1 should not equal tri5");
+	}
+
+	/**
+	 * Test triangulation of a simple triangle.
+	 */
+	static function dttestSimpleTriangle():Void {
+		trace("Running DelaunayTriangulator testSimpleTriangle...");
+		var points = [new Point2D(0, 0), new Point2D(1, 0), new Point2D(0, 1)];
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		// Expecting one triangle
+		Assert.assertEquals(1, triangles.length, "Simple Triangle: Incorrect number of triangles");
+
+		var tri = triangles[0];
+		Assert.assertTrue((tri.a.eqval(points[0]) && tri.b.eqval(points[1]) && tri.c.eqval(points[2]))
+			|| (tri.a.eqval(points[1]) && tri.b.eqval(points[2]) && tri.c.eqval(points[0]))
+			|| (tri.a.eqval(points[2]) && tri.b.eqval(points[0]) && tri.c.eqval(points[1])),
+			"Simple Triangle: Triangle vertices do not match input points");
+
+		// Verify circumcircle does not contain any other points (none in this case)
+	}
+
+	/**
+	 * Test triangulation of a convex square.
+	 */
+	static function dttestConvexSquare():Void {
+		trace("Running DelaunayTriangulator testConvexSquare...");
+		var points = [new Point2D(0, 0), new Point2D(2, 0), new Point2D(2, 2), new Point2D(0, 2)];
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		// Expecting two triangles
+		Assert.assertEquals(2, triangles.length, "Convex Square: Incorrect number of triangles");
+
+		// Verify that each triangle's circumcircle does not contain any other points
+		for (tri in triangles) {
+			for (p in points) {
+				if (tri.containsPoint(p))
+					continue;
+				Assert.assertTrue(!tri.circumCircleContains(p), "Convex Square: Point " + p.toString() + " lies inside the circumcircle of a triangle");
+			}
+		}
+	}
+
+	/**
+	 * Test triangulation of a convex pentagon.
+	 */
+	static function dttestConvexPentagon():Void {
+		trace("Running DelaunayTriangulator testConvexPentagon...");
+		var points = [
+			new Point2D(0, 0),
+			new Point2D(2, 0),
+			new Point2D(3, 1),
+			new Point2D(1.5, 3),
+			new Point2D(0, 2)
+		];
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		// Expecting three triangles
+		Assert.assertEquals(3, triangles.length, "Convex Pentagon: Incorrect number of triangles");
+
+		// Verify Delaunay condition
+		for (tri in triangles) {
+			for (p in points) {
+				if (tri.containsPoint(p))
+					continue;
+				Assert.assertTrue(!tri.circumCircleContains(p), "Convex Pentagon: Point " + p.toString() + " lies inside the circumcircle of a triangle");
+			}
+		}
+	}
+
+	/**
+	 * Test triangulation of a concave polygon.
+	 */
+	static function dttestConcavePolygon():Void {
+		trace("Running DelaunayTriangulator testConcavePolygon...");
+		var points = [
+			new Point2D(0, 0),
+			new Point2D(2, 1),
+			new Point2D(4, 0),
+			new Point2D(3, 2),
+			new Point2D(4, 4),
+			new Point2D(2, 3),
+			new Point2D(0, 4),
+			new Point2D(1, 2)
+		];
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		Assert.assertEquals(10, triangles.length, "Concave Polygon: Incorrect number of triangles");
+
+		// Verify Delaunay condition
+		for (tri in triangles) {
+			for (p in points) {
+				if (tri.containsPoint(p))
+					continue;
+				Assert.assertTrue(!tri.circumCircleContains(p), "Concave Polygon: Point " + p.toString() + " lies inside the circumcircle of a triangle");
+			}
+		}
+	}
+
+	/**
+	 * Test triangulation of a random point cloud.
+	 */
+	static function dttestRandomPointCloud():Void {
+		trace("Running DelaunayTriangulator testRandomPointCloud...");
+		var points = new Array<Point2D>();
+		var random = new seedyrng.Random();
+		var numPoints = 100;
+		for (i in 0...numPoints) {
+			var x = random.random() * 100;
+			var y = random.random() * 100;
+			points.push(new Point2D(x, y));
+		}
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		// For n points, expect roughly 2n - 5 triangles (Euler's formula for planar graphs)
+		var expectedTriangles = 2 * numPoints - 5;
+		Assert.assertTrue(triangles.length >= expectedTriangles * 0.9 && triangles.length <= expectedTriangles * 1.1,
+			"Random Point Cloud: Number of triangles deviates significantly from expected");
+
+		// Verify Delaunay condition
+		for (tri in triangles) {
+			for (p in points) {
+				if (tri.containsPoint(p))
+					continue;
+				Assert.assertTrue(!tri.circumCircleContains(p), "Random Point Cloud: Point " + p.toString() + " lies inside the circumcircle of a triangle");
+			}
+		}
+	}
+
+	/**
+	 * Test triangulation with colinear points.
+	 */
+	static function dttestColinearPoints():Void {
+		trace("Running DelaunayTriangulator testColinearPoints...");
+		var points = [
+			new Point2D(0, 0),
+			new Point2D(1, 1),
+			new Point2D(2, 2),
+			new Point2D(3, 3),
+			new Point2D(4, 4)
+		];
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		// Colinear points do not form a valid triangulation
+		Assert.assertEquals(0, triangles.length, "Colinear Points: Should return no triangles");
+	}
+
+	/**
+	 * Test triangulation with duplicate points.
+	 */
+	static function dttestDuplicatePoints():Void {
+		trace("Running DelaunayTriangulator testDuplicatePoints...");
+		var points = [
+			new Point2D(0, 0),
+			new Point2D(2, 0),
+			new Point2D(2, 0), // Duplicate
+			new Point2D(2, 2),
+			new Point2D(0, 2)
+		];
+
+		var uniquePoints = removeDuplicatePoints(points);
+		var expectedTriangles = uniquePoints.length >= 3 ? uniquePoints.length - 2 : 0;
+
+		var triangles = DelaunayTriangulator.triangulate(points);
+
+		Assert.assertEquals(expectedTriangles, triangles.length, "Duplicate Points: Incorrect number of triangles");
+
+		// Verify Delaunay condition
+		for (tri in triangles) {
+			for (p in uniquePoints) {
+				if (tri.containsPoint(p))
+					continue;
+				Assert.assertTrue(!tri.circumCircleContains(p), "Duplicate Points: Point " + p.toString() + " lies inside the circumcircle of a triangle");
+			}
+		}
+	}
+
+	/**
+	 * Test triangulation of degenerate cases.
+	 */
+	static function dttestDegenerateCases():Void {
+		trace("Running DelaunayTriangulator testDegenerateCases...");
+
+		// Less than 3 points
+		var points1 = [new Point2D(0, 0), new Point2D(1, 1)];
+		var triangles1 = DelaunayTriangulator.triangulate(points1);
+		Assert.assertEquals(0, triangles1.length, "Degenerate Case (2 points): Should return no triangles");
+
+		// All points duplicate
+		var points2 = [new Point2D(0, 0), new Point2D(0, 0), new Point2D(0, 0)];
+		var triangles2 = DelaunayTriangulator.triangulate(points2);
+		Assert.assertEquals(0, triangles2.length, "Degenerate Case (all duplicates): Should return no triangles");
+
+		// All points colinear
+		var points3 = [new Point2D(0, 0), new Point2D(1, 1), new Point2D(2, 2), new Point2D(3, 3)];
+		var triangles3 = DelaunayTriangulator.triangulate(points3);
+		Assert.assertEquals(0, triangles3.length, "Degenerate Case (colinear points): Should return no triangles");
+	}
+
+	/**
+	 * Test Case 1: Triangles Completely Inside a Convex Polygon
+	 * Expected Outcome: All such triangles are removed.
+	 */
+	static function tftestTrianglesCompletelyInsidePolygon():Void {
+		trace("Running testTrianglesCompletelyInsidePolygon...");
+
+		// Define a convex polygon (square)
+		var polygon = [new Point2D(1, 1), new Point2D(5, 1), new Point2D(5, 5), new Point2D(1, 5)];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(2, 2), new Point2D(3, 2), new Point2D(2.5, 3)); // Inside
+		var tri2 = new Triangle2D(new Point2D(1.5, 1.5), new Point2D(4.5, 1.5), new Point2D(3, 4)); // Inside
+		var tri3 = new Triangle2D(new Point2D(6, 6), new Point2D(7, 6), new Point2D(6.5, 7)); // Clearly Outside
+
+		var triangles = [tri1, tri2, tri3];
+		var polygons = [polygon];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Only tri3 remains
+		Assert.assertEquals(1, filtered.length, "Test 1 Failed: Expected 1 triangle after filtering.");
+		if (filtered.length > 0)
+			Assert.assertTrue(filtered[0].eqvalUnordered(tri3), "Test 1 Failed: Expected tri3 to remain.");
+	}
+
+	/**
+	 * Test Case 2: Triangles Partially Overlapping a Convex Polygon
+	 * Expected Outcome: All such triangles are removed.
+	 */
+	static function tftestTrianglesPartiallyOverlappingPolygon():Void {
+		trace("Running testTrianglesPartiallyOverlappingPolygon...");
+
+		// Define a convex polygon (triangle)
+		var polygon = [new Point2D(2, 2), new Point2D(4, 2), new Point2D(3, 4)];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(3, 3), new Point2D(5, 3), new Point2D(4, 5)); // Partially Overlapping
+		var tri2 = new Triangle2D(new Point2D(1, 1), new Point2D(3, 1), new Point2D(2, 3)); // Partially Overlapping
+		var tri3 = new Triangle2D(new Point2D(5, 5), new Point2D(6, 6), new Point2D(7, 5)); // Outside
+
+		var triangles = [tri1, tri2, tri3];
+		var polygons = [polygon];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Only tri3 remains
+		Assert.assertEquals(1, filtered.length, "Test 2 Failed: Expected 1 triangle after filtering.");
+		Assert.assertTrue(filtered[0].eqvalUnordered(tri3), "Test 2 Failed: Expected tri3 to remain.");
+	}
+
+	/**
+	 * Test Case 3: Triangles Completely Outside All Polygons
+	 * Expected Outcome: All such triangles remain.
+	 */
+	static function tftestTrianglesCompletelyOutsidePolygon():Void {
+		trace("Running testTrianglesCompletelyOutsidePolygon...");
+
+		// Define a convex polygon (rectangle)
+		var polygon = [new Point2D(2, 2), new Point2D(4, 2), new Point2D(4, 4), new Point2D(2, 4)];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(0, 0), new Point2D(1, 0), new Point2D(0.5, 1)); // Outside
+		var tri2 = new Triangle2D(new Point2D(5, 5), new Point2D(6, 5), new Point2D(5.5, 6)); // Outside
+
+		var triangles = [tri1, tri2];
+		var polygons = [polygon];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Both triangles remain
+		Assert.assertEquals(2, filtered.length, "Test 3 Failed: Expected 2 triangles after filtering.");
+		Assert.assertTrue(filtered[0].eqvalUnordered(tri1), "Test 3 Failed: Expected tri1 to remain.");
+		Assert.assertTrue(filtered[1].eqvalUnordered(tri2), "Test 3 Failed: Expected tri2 to remain.");
+	}
+
+	/**
+	 * Test Case 4: Triangles Sharing Edges with a Polygon
+	 * Expected Outcome: Depending on implementation, these triangles may be removed.
+	 * For this test, we'll assume that sharing an edge counts as overlapping, hence removed.
+	 */
+	static function tftestTrianglesSharingEdgesWithPolygon():Void {
+		trace("Running testTrianglesSharingEdgesWithPolygon...");
+
+		// Define a convex polygon (triangle)
+		var polygon = [new Point2D(2, 2), new Point2D(4, 2), new Point2D(3, 4)];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(2, 2), new Point2D(4, 2), new Point2D(3, 3)); // Shares edge (2,2)-(4,2)
+		var tri2 = new Triangle2D(new Point2D(4, 2), new Point2D(3, 4), new Point2D(5, 4)); // Shares edge (4,2)-(3,4)
+		var tri3 = new Triangle2D(new Point2D(1, 1), new Point2D(2, 2), new Point2D(3, 1)); // Shares vertex (2,2)
+		var tri4 = new Triangle2D(new Point2D(0, 0), new Point2D(1, 0), new Point2D(0.5, 1)); // Outside
+
+		var triangles = [tri1, tri2, tri3, tri4];
+		var polygons = [polygon];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Only tri4 remains
+		Assert.assertEquals(1, filtered.length, "Test 4 Failed: Expected 1 triangle after filtering.");
+		Assert.assertTrue(filtered[0].eqvalUnordered(tri4), "Test 4 Failed: Expected tri4 to remain.");
+	}
+
+	/**
+	 * Test Case 5: Triangles with Multiple Polygons (Both Convex and Concave)
+	 * Expected Outcome: Triangles overlapping with any polygon are removed.
+	 */
+	static function tftestTrianglesWithMultiplePolygons():Void {
+		trace("Running testTrianglesWithMultiplePolygons...");
+
+		// Define two polygons: one convex and one concave
+		var convexPolygon = [new Point2D(1, 1), new Point2D(3, 1), new Point2D(3, 3), new Point2D(1, 3)];
+
+		var concavePolygon = [
+			new Point2D(4, 1),
+			new Point2D(6, 1),
+			new Point2D(6, 3),
+			new Point2D(5, 2),
+			new Point2D(4, 3)
+		];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(2, 2), new Point2D(3, 2), new Point2D(2.5, 2.5)); // Inside convex
+		var tri2 = new Triangle2D(new Point2D(5, 2), new Point2D(6, 2), new Point2D(5.5, 2.5)); // Inside concave
+		var tri3 = new Triangle2D(new Point2D(0, 0), new Point2D(1, 0), new Point2D(0.5, 1)); // Outside
+		var tri4 = new Triangle2D(new Point2D(3, 4), new Point2D(4, 4), new Point2D(3.5, 5)); // Outside
+		var tri5 = new Triangle2D(new Point2D(2, 3), new Point2D(3, 3), new Point2D(2.5, 4)); // Partially Overlapping concave
+
+		var triangles = [tri1, tri2, tri3, tri4, tri5];
+		var polygons = [convexPolygon, concavePolygon];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Only tri3 and tri4 remain
+		Assert.assertEquals(2, filtered.length, "Test 5 Failed: Expected 2 triangles after filtering.");
+		Assert.assertTrue(filtered.exists(function(t:Triangle2D) return t.eqvalUnordered(tri3)), "Test 5 Failed: Expected tri3 to remain.");
+		Assert.assertTrue(filtered.exists(function(t:Triangle2D) return t.eqvalUnordered(tri4)), "Test 5 Failed: Expected tri4 to remain.");
+	}
+
+	/**
+	 * Test Case 6: Degenerate Triangles
+	 * Expected Outcome: Depending on implementation, degenerate triangles can be removed or ignored.
+	 * For this test, we'll assume degenerate triangles are to be removed.
+	 */
+	static function tftestDegenerateTriangles():Void {
+		trace("Running testDegenerateTriangles...");
+
+		// Define polygons
+		var polygon = [new Point2D(2, 2), new Point2D(4, 2), new Point2D(4, 4), new Point2D(2, 4)];
+
+		var degeneratePolygon = [new Point2D(0, 0), new Point2D(2, 0), new Point2D(2, 2), new Point2D(0, 2)];
+
+		var polygons = [polygon, degeneratePolygon];
+
+		// Define triangles
+		var tri1 = new Triangle2D(new Point2D(1, 1), new Point2D(1, 1), new Point2D(1, 1)); // Completely degenerate
+		var tri2 = new Triangle2D(new Point2D(2, 2), new Point2D(3, 3), new Point2D(4, 4)); // Colinear (degenerate)
+		var tri3 = new Triangle2D(new Point2D(5, 5), new Point2D(6, 5), new Point2D(5.5, 6)); // Valid
+		var tri4 = new Triangle2D(new Point2D(0, 0), new Point2D(1, 0), new Point2D(0.5, 1)); // Valid but inside degeneratePolygon
+
+		var triangles = [tri1, tri2, tri3, tri4];
+
+		var filtered = TriangleFilter.filterTriangles(triangles, polygons);
+
+		// Expected: Only tri3 remains (tri1 and tri2 are degenerate and within polygons, tri4 is valid but inside degeneratePolygon)
+		Assert.assertEquals(1, filtered.length, "Test 6 Failed: Expected 1 triangle after filtering.");
+		if (filtered.length > 0)
+			Assert.assertTrue(filtered[0].eqvalUnordered(tri3), "Test 6 Failed: Expected tri3 to remain.");
+
+		trace("testDegenerateTriangles passed.");
+	}
+
+	// Helper function to check if a point is on the edge between two vertices
+	public static function isPointOnEdge(p:Point2D, v1:Point2D, v2:Point2D, epsilon:Float = 1e-6):Bool {
+		var cross = (p.y - v1.y) * (v2.x - v1.x) - (p.x - v1.x) * (v2.y - v1.y);
+		if (Math.abs(cross) > epsilon)
+			return false;
+
+		var dot = (p.x - v1.x) * (v2.x - v1.x) + (p.y - v1.y) * (v2.y - v1.y);
+		if (dot < 0)
+			return false;
+
+		var lenSq = (v2.x - v1.x) * (v2.x - v1.x) + (v2.y - v1.y) * (v2.y - v1.y);
+		if (dot > lenSq)
+			return false;
+
+		return true;
+	}
+
+	public static function pftestGenerateEdgePoints() {
+		trace("Testing generateEdgePoints...");
+
+		// Test with a square
+		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+		var spacing = 2.0;
+		var edgePoints = square.generateEdgePoints(spacing);
         
-        var insidePoint = new Point2D(2, 1);
-        var outsidePoint = new Point2D(2, 4);
-        
-        Assert.assertTrue(tri.circumCircleContains(insidePoint), "Point should be inside the circumcircle");
-        Assert.assertTrue(!tri.circumCircleContains(outsidePoint), "Point should be outside the circumcircle");
-    }
+        SVGGenerate.writePointField("pf_square_edges.svg", edgePoints );
 
 
-       /**
-     * Test the eqval function for Triangle2D.
-     */
-     static function dttestTriangleEquality():Void {
-        trace("Running DelaunayTriangulator testTriangleEquality...");
+		// Expected number of edge points (approximate)
+		var perimeter = square.getPerimeter();
+		var expectedNumPoints = Math.ceil(perimeter / spacing);
+		trace('Expected number of edge points (approx): ' + expectedNumPoints);
+		trace('Actual number of edge points: ' + edgePoints.length);
 
-        var p1 = new Point2D(0, 0);
-        var p2 = new Point2D(1, 0);
-        var p3 = new Point2D(0, 1);
-        var p4 = new Point2D(1, 1);
+		// Check that all points are on the edges
+		for (p in edgePoints) {
+			var onEdge = false;
+			for (i in 0...square.length) {
+				var v1 = square[i];
+				var v2 = square[(i + 1) % square.length];
+				if (isPointOnEdge(p, v1, v2)) {
+					onEdge = true;
+					break;
+				}
+			}
+			if (!onEdge) {
+				trace('Point not on edge: ' + p);
+			}
+			Assert.assertTrue(onEdge, 'Edge point should be on an edge');
+		}
 
-        // Create triangles with consistent CCW orientation
-        var tri1 = dtcreateTriangle(p1, p2, p3); // (0,0), (1,0), (0,1)
-        var tri2 = dtcreateTriangle(p2, p3, p1); // Cyclic permutation
-        var tri3 = dtcreateTriangle(p3, p1, p2); // Cyclic permutation
-        var tri4 = dtcreateTriangle(p1, p3, p2); // Should be reordered to CCW
+		trace("generateEdgePoints test passed for square.\n");
+	}
 
-        // Assert equality
-        Assert.assertTrue(tri1.eqvalCCW(tri2), "tri1 should equal tri2");
-        Assert.assertTrue(tri1.eqvalCCW(tri3), "tri1 should equal tri3");
-        Assert.assertTrue(tri1.eqvalCCW(tri4), "tri1 should equal tri4 after orientation correction");
-        
-        // Create a different triangle
-        var tri5 = dtcreateTriangle(p1, p2, p4); // Different set of vertices
-        Assert.assertTrue(!tri1.eqvalCCW(tri5), "tri1 should not equal tri5");
-    }
+	public static function pftestGenerateInteriorPoints() {
+		trace("Testing generateInteriorPoints...");
 
-    
-    /**
-     * Test triangulation of a simple triangle.
-     */
-    static function dttestSimpleTriangle():Void {
-        trace("Running DelaunayTriangulator testSimpleTriangle...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(1, 0),
-            new Point2D(0, 1)
-        ];
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        // Expecting one triangle
-        Assert.assertEquals(1, triangles.length, "Simple Triangle: Incorrect number of triangles");
-        
-        var tri = triangles[0];
-        Assert.assertTrue(
-            (tri.a.eqval(points[0]) && tri.b.eqval(points[1]) && tri.c.eqval(points[2])) ||
-            (tri.a.eqval(points[1]) && tri.b.eqval(points[2]) && tri.c.eqval(points[0])) ||
-            (tri.a.eqval(points[2]) && tri.b.eqval(points[0]) && tri.c.eqval(points[1])),
-            "Simple Triangle: Triangle vertices do not match input points"
-        );
-        
-        // Verify circumcircle does not contain any other points (none in this case)
-    }
-    
-    /**
-     * Test triangulation of a convex square.
-     */
-    static function dttestConvexSquare():Void {
-        trace("Running DelaunayTriangulator testConvexSquare...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(2, 0),
-            new Point2D(2, 2),
-            new Point2D(0, 2)
-        ];
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        // Expecting two triangles
-        Assert.assertEquals(2, triangles.length, "Convex Square: Incorrect number of triangles");
-        
-        // Verify that each triangle's circumcircle does not contain any other points
-        for (tri in triangles) {
-            for (p in points) {
-                if (tri.containsPoint(p)) continue;
-                Assert.assertTrue(
-                    !tri.circumCircleContains(p),
-                    "Convex Square: Point " + p.toString() + " lies inside the circumcircle of a triangle"
-                );
-            }
-        }
-    }
-    
-    /**
-     * Test triangulation of a convex pentagon.
-     */
-    static function dttestConvexPentagon():Void {
-        trace("Running DelaunayTriangulator testConvexPentagon...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(2, 0),
-            new Point2D(3, 1),
-            new Point2D(1.5, 3),
-            new Point2D(0, 2)
-        ];
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        // Expecting three triangles
-        Assert.assertEquals(3, triangles.length, "Convex Pentagon: Incorrect number of triangles");
-        
-        // Verify Delaunay condition
-        for (tri in triangles) {
-            for (p in points) {
-                if (tri.containsPoint(p)) continue;
-                Assert.assertTrue(
-                    !tri.circumCircleContains( p),
-                    "Convex Pentagon: Point " + p.toString() + " lies inside the circumcircle of a triangle"
-                );
-            }
-        }
-    }
-    
-    /**
-     * Test triangulation of a concave polygon.
-     */
-    static function dttestConcavePolygon():Void {
-        trace("Running DelaunayTriangulator testConcavePolygon...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(2, 1),
-            new Point2D(4, 0),
-            new Point2D(3, 2),
-            new Point2D(4, 4),
-            new Point2D(2, 3),
-            new Point2D(0, 4),
-            new Point2D(1, 2)
-        ];
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        Assert.assertEquals(10, triangles.length, "Concave Polygon: Incorrect number of triangles");
-        
-        // Verify Delaunay condition
-        for (tri in triangles) {
-            for (p in points) {
-                if (tri.containsPoint(p)) continue;
-                Assert.assertTrue(
-                    !tri.circumCircleContains( p),
-                    "Concave Polygon: Point " + p.toString() + " lies inside the circumcircle of a triangle"
-                );
-            }
-        }
-    }
-    
-    /**
-     * Test triangulation of a random point cloud.
-     */
-    static function dttestRandomPointCloud():Void {
-        trace("Running DelaunayTriangulator testRandomPointCloud...");
-        var points = new Array<Point2D>();
-        var random = new seedyrng.Random();
-        var numPoints = 100;
-        for (i in 0...numPoints) {
-            var x = random.random() * 100;
-            var y = random.random() * 100;
-            points.push(new Point2D(x, y));
-        }
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        // For n points, expect roughly 2n - 5 triangles (Euler's formula for planar graphs)
-        var expectedTriangles = 2 * numPoints - 5;
-        Assert.assertTrue(
-            triangles.length >= expectedTriangles * 0.9 && triangles.length <= expectedTriangles * 1.1,
-            "Random Point Cloud: Number of triangles deviates significantly from expected"
-        );
-        
-        // Verify Delaunay condition
-        for (tri in triangles) {
-            for (p in points) {
-                if (tri.containsPoint(p)) continue;
-                Assert.assertTrue(
-                    !tri.circumCircleContains( p),
-                    "Random Point Cloud: Point " + p.toString() + " lies inside the circumcircle of a triangle"
-                );
-            }
-        }
-    }
-    
-    /**
-     * Test triangulation with colinear points.
-     */
-    static function dttestColinearPoints():Void {
-        trace("Running DelaunayTriangulator testColinearPoints...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(1, 1),
-            new Point2D(2, 2),
-            new Point2D(3, 3),
-            new Point2D(4, 4)
-        ];
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        // Colinear points do not form a valid triangulation
-        Assert.assertEquals(0, triangles.length, "Colinear Points: Should return no triangles");
-    }
-    
-    /**
-     * Test triangulation with duplicate points.
-     */
-    static function dttestDuplicatePoints():Void {
-        trace("Running DelaunayTriangulator testDuplicatePoints...");
-        var points = [
-            new Point2D(0, 0),
-            new Point2D(2, 0),
-            new Point2D(2, 0), // Duplicate
-            new Point2D(2, 2),
-            new Point2D(0, 2)
-        ];
-        
-        var uniquePoints = removeDuplicatePoints(points);
-        var expectedTriangles = uniquePoints.length >= 3 ? uniquePoints.length - 2 : 0;
-        
-        var triangles = DelaunayTriangulator.triangulate(points);
-        
-        Assert.assertEquals(expectedTriangles, triangles.length, "Duplicate Points: Incorrect number of triangles");
-        
-        // Verify Delaunay condition
-        for (tri in triangles) {
-            for (p in uniquePoints) {
-                if (tri.containsPoint(p)) continue;
-                Assert.assertTrue(
-                    !tri.circumCircleContains( p),
-                    "Duplicate Points: Point " + p.toString() + " lies inside the circumcircle of a triangle"
-                );
-            }
-        }
-    }
-    
-    /**
-     * Test triangulation of degenerate cases.
-     */
-    static function dttestDegenerateCases():Void {
-        trace("Running DelaunayTriangulator testDegenerateCases...");
-        
-        // Less than 3 points
-        var points1 = [
-            new Point2D(0, 0),
-            new Point2D(1, 1)
-        ];
-        var triangles1 = DelaunayTriangulator.triangulate(points1);
-        Assert.assertEquals(0, triangles1.length, "Degenerate Case (2 points): Should return no triangles");
-        
-        // All points duplicate
-        var points2 = [
-            new Point2D(0, 0),
-            new Point2D(0, 0),
-            new Point2D(0, 0)
-        ];
-        var triangles2 = DelaunayTriangulator.triangulate(points2);
-        Assert.assertEquals(0, triangles2.length, "Degenerate Case (all duplicates): Should return no triangles");
-        
-        // All points colinear
-        var points3 = [
-            new Point2D(0, 0),
-            new Point2D(1, 1),
-            new Point2D(2, 2),
-            new Point2D(3, 3)
-        ];
-        var triangles3 = DelaunayTriangulator.triangulate(points3);
-        Assert.assertEquals(0, triangles3.length, "Degenerate Case (colinear points): Should return no triangles");
-    }
-    
+		// Test with a square
+		var square : Polygon2D = [new Point2D(-20, -20), new Point2D(20, -20), new Point2D(10, 10), new Point2D(0, 10)];
+		var minDistance = 2.0;
+		var interiorPoints = square.generateInteriorPoints( minDistance);
+
+        SVGGenerate.writePointField("pf_square_interior.svg", interiorPoints );
+
+
+        trace('Checking inside...');
+		// Check that all points are inside the polygon
+		for (p in interiorPoints) {
+			var inside = square.containsPoint(p);
+			if (!inside) {
+				trace('Point not inside polygon: ' + p);
+			}
+			Assert.assertTrue(inside, 'Interior point should be inside the polygon');
+		}
+
+        trace('Checking min distance...');
+		// Check that points are at least minDistance apart
+		for (i in 0...interiorPoints.length) {
+			var p1 = interiorPoints[i];
+			for (j in i + 1...interiorPoints.length) {
+				var p2 = interiorPoints[j];
+				var dist = p1.distanceTo(p2);
+				if (dist < minDistance - 1e-6) {
+					trace('Points too close: ' + p1 + ' and ' + p2 + ', distance: ' + dist);
+				}
+				Assert.assertTrue(dist >= minDistance - 1e-6, 'Points should be at least minDistance apart');
+			}
+		}
+
+		trace("generateInteriorPoints test passed for square.\n");
+	}
+
+	public static function pftestGeneratePointField() {
+		trace("Testing generatePointField...");
+
+		// Test with a square
+		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+		var spacing = 2.0;
+		var pointField = square.generatePointField( spacing);
+
+        SVGGenerate.writePointField("pf_square.svg", pointField );
+
+
+		// Separate edge and interior points for testing
+		var edgePoints = new Array<Point2D>();
+		var interiorPoints = new Array<Point2D>();
+		for (p in pointField) {
+			var onEdge = false;
+			for (i in 0...square.length) {
+				var v1 = square[i];
+				var v2 = square[(i + 1) % square.length];
+				if (isPointOnEdge(p, v1, v2)) {
+					onEdge = true;
+					break;
+				}
+			}
+			if (onEdge) {
+				edgePoints.push(p);
+			} else {
+				interiorPoints.push(p);
+			}
+		}
+
+		// Check edge points
+		for (p in edgePoints) {
+			var onEdge = false;
+			for (i in 0...square.length) {
+				var v1 = square[i];
+				var v2 = square[(i + 1) % square.length];
+				if (isPointOnEdge(p, v1, v2)) {
+					onEdge = true;
+					break;
+				}
+			}
+			Assert.assertTrue(onEdge, 'Edge point should be on an edge');
+		}
+
+		// Check interior points
+		var minDistance = spacing;
+		for (i in 0...interiorPoints.length) {
+			var p1 = interiorPoints[i];
+			var inside = square.containsPoint(p1);
+			Assert.assertTrue(inside, 'Interior point should be inside the polygon');
+
+			for (j in i + 1...interiorPoints.length) {
+				var p2 = interiorPoints[j];
+				var dist = p1.distanceTo(p2);
+				Assert.assertTrue(dist >= minDistance - 1e-6, 'Interior points should be at least minDistance apart');
+			}
+		}
+
+		// Check that edge and interior points are at least minDistance apart
+		for (p1 in interiorPoints) {
+			for (p2 in edgePoints) {
+				var dist = p1.distanceTo(p2);
+				Assert.assertTrue(dist >= minDistance - 1e-6, 'Points should be at least minDistance apart');
+			}
+		}
+
+		trace("generatePointField test passed for square.\n");
+	}
 }
-
-
