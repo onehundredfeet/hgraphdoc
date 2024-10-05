@@ -59,6 +59,13 @@ class Rect2D {
             this.expandToInclude(p);
         }
     }
+    public function expandToIncludeTriangles(triangles:Array<Triangle2D>):Void {
+        for (t in triangles) {
+            this.expandToInclude(t.a);
+            this.expandToInclude(t.b);
+            this.expandToInclude(t.c);
+        }
+    }
 
     public static function infiniteEmpty() : Rect2D {
         return new Rect2D( Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY );

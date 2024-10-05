@@ -11,6 +11,10 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		return this.copy();
 	}
 
+    public inline function asArray():Array<Point2D> {
+        return this;
+    }
+
 	//  shoelace formula
 	public function isCounterClockwise():Bool {
 		var sum = 0.0;

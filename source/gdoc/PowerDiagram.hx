@@ -9,7 +9,11 @@ import gdoc.Clipping2D;
 
 @:forward
 @:forward.new
-abstract PowerCell(Array<Point2D>) from Array<Point2D> to Array<Point2D> {}
+abstract PowerCell(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
+    public inline function asArray():Array<Point2D> {
+        return this;
+    }
+}
 
 @:forward
 @:forward.new

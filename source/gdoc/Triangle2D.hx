@@ -178,4 +178,39 @@ class Triangle2D {
     public inline function isCounterClockwise():Bool {
         return Point2D.orientation(a, b, c) > 0;
     }
+
+
+    public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {
+        if (isDegenerate()) {
+            return false; 
+        }
+        
+        if (containsPoint(p1) || containsPoint(p2)) {
+            return true; 
+        }
+
+        if (Line2D.segmentsIntersect(p1, p2, a, b) || Line2D.segmentsIntersect(p1, p2, b, c) || Line2D.segmentsIntersect(p1, p2, c, a)) {
+            return true;
+        }
+                
+        return false; 
+    }
+
+    
+    public function overlapsCircle(center:Point2D, radius:Float):Bool {
+        var r2 = (radius + EPSILON) * (radius + EPSILON);
+
+        if (a.withinSqared(center, r2)) return true;
+        if (b.withinSqared(center, r2)) return true;
+        if (c.withinSqared(center, r2)) return true;
+        
+        if (containsPoint(center)) return true;
+
+        if (Line2D.segmentIntersectsCircle(a, b, center, radius)) return true;
+        if (Line2D.segmentIntersectsCircle(b, c, center, radius)) return true;
+        if (Line2D.segmentIntersectsCircle(c, a, center, radius)) return true;
+        
+        return false; 
+    }
+
 }

@@ -23,9 +23,36 @@ class Frame {
         this.margin = margin;
 
     }
+
+    public function transformX( x : Float ) : Float {
+        return (x - bounds.xmin) * scale + margin;
+    }
+    public function transformY( y : Float ) : Float {
+        return height - ((y - bounds.ymin) * scale + margin);
+    }
+
+    public static function generateFrameOrDefault( frame : Frame, bounds: Rect2D, width : Float = 1000.0, height : Float = 1000.0, margin : Float = 100.0 ) {
+        if (frame != null) {
+            frame = new Frame( frame.width, frame.height, frame.margin);
+        } else {
+            frame = new Frame( width, height, margin);
+        }
+
+        var range_x = bounds.width;
+        var range_y = bounds.height;
+        var x_scale = (width - 2 * margin) / (range_x);
+        var y_scale = (height - 2 * margin) / (range_y);
+        frame.scale = x_scale < y_scale ? x_scale : y_scale;
+        frame.bounds = bounds;
+
+        return frame;
+    }
     public var width : Float;
     public var height : Float;
     public var margin : Float;
+
+    public var scale(default,null) : Float = 1.0;
+    public var bounds(default,null) : Rect2D;
 }
 
 class SVGGenerate {
@@ -54,22 +81,49 @@ class SVGGenerate {
         File.saveContent(path, svgContent.toString());
     }
 
+    public static function writeTriangles( path: String, triangles : Array<Triangle2D>, frame: Frame = null) {
+        var svgContent = startSVG(); 
+        var attr = new SVGNodeAttributes();
+        attr.fill = "lightblue";
+        attr.stroke = "black";
+        attr.recursive = true;
+        attr.r = 1.0;
+
+        var bounds = Rect2D.infiniteEmpty();
+
+        bounds.expandToIncludeTriangles(triangles);
+        frame = Frame.generateFrameOrDefault(frame, bounds);
+
+        for (triangle in triangles) {
+            var a = triangle.a;
+            var b = triangle.b;
+            var c = triangle.c;
+
+            var ax = frame.transformX(a.x);
+            var ay = frame.transformY(a.y);
+            var bx = frame.transformX(b.x);
+            var by = frame.transformY(b.y);
+            var cx = frame.transformX(c.x);
+            var cy = frame.transformY(c.y);
+
+            svgContent.add('<polygon points="${ax},${ay} ${bx},${by} ${cx},${cy}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+        }
+
+        finishSVG(path, svgContent);
+    }
+
     public static function writePointField(path : String,field:PointField2D, frame: Frame = null, stylizer : (Point2D, SVGNodeAttributes) -> Void = null) {
         var svgContent = startSVG(); 
         var bounds = Rect2D.infiniteEmpty();
 
         bounds.expandToIncludePoints(field);
-        frame = getFrameOrDefault(frame);
+        frame = Frame.generateFrameOrDefault(frame, bounds);
 
-        var range_x = bounds.width;
-        var range_y = bounds.height;
-        var x_scale = (frame.width - 2 * frame.margin) / (range_x);
-        var y_scale = (frame.height - 2 * frame.margin) / (range_y);
-        var uni_scale = x_scale < y_scale ? x_scale : y_scale;
+        var uni_scale = frame.scale;
 
         var attr = new SVGNodeAttributes();
 
-        attr.r = Math.min(range_x, range_y) / 50.0;
+        attr.r = Math.min(bounds.width, bounds.height) / 50.0;
         attr.fill = "lightblue";
         attr.stroke = "black";
         attr.recursive = true;
@@ -89,13 +143,6 @@ class SVGGenerate {
         finishSVG(path, svgContent);
     }
 
-    static function getFrameOrDefault(frame: Frame) {
-        if (frame == null) {
-            frame = new Frame();
-        }
-        return frame;
-    }
-
     public static function writePowerDiagram(path : String,diagram: Map<Int, PowerCell>, centers : Array<WeightedPoint2D>, frame: Frame = null) {
         var svgContent = startSVG(); 
         
@@ -107,7 +154,7 @@ class SVGGenerate {
             bounds.expandToIncludePoints(cell);
         }
 
-        frame = getFrameOrDefault(frame);
+        frame = Frame.generateFrameOrDefault(frame, bounds);
 
         var range_x = bounds.width;
         var range_y = bounds.height;
