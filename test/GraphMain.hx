@@ -1,5 +1,6 @@
 package test;
 
+import gdoc.PointField2D;
 import gdoc.Polygon2D;
 import haxe.Int64;
 import gdoc.FaceMesh3D.FaceMesh3DFace;
@@ -231,6 +232,7 @@ class GraphMain {
         pftestGenerateEdgePoints();
         pftestGenerateInteriorPoints();
         pftestGeneratePointField();
+        pftestMerge();
 	}
 
 	static var passedTests = 0;
@@ -1437,6 +1439,20 @@ class GraphMain {
 				Assert.assertTrue(dist >= minDistance - 1e-6, 'Points should be at least minDistance apart');
 			}
 		}
+
+		trace("generatePointField test passed for square.\n");
+	}
+
+    public static function pftestMerge() {
+		trace("Testing pftestMerge...");
+
+		// Test with a square
+		var square : PointField2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10), new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+
+        var merged = square.mergeAndRemap();
+
+        Assert.assertEquals(4, merged.points.length, "Merged square should have 4 points");
+        Assert.assertEquals(8, merged.indices.length, "Merged square should have 8 indices");
 
 		trace("generatePointField test passed for square.\n");
 	}

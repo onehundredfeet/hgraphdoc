@@ -37,8 +37,28 @@ class Point2D {
     public function eqval( p:Point2D, epsilon:Float = 1e-12):Bool {
         return Math.abs(this.x - p.x) < epsilon && Math.abs(this.y - p.y) < epsilon;
     }
+    public inline function withinSqared( p:Point2D, distanceSquared:Float):Bool {
+        var dx = this.x - p.x;
+        var dy = this.y - p.y;
+        return dx * dx + dy * dy <= distanceSquared;
+    }
 
-    
+    static inline final HASH_PRECISION = 1e5;
+    static inline final MODULUS = 0x7FFFFFFF; // Example modulus for 32-bit systems
+
+    public inline function getHash():Int {
+        var prime1:Int = 23459;
+        var prime2:Int = 54323;
+        
+        // Scale and round coordinates to handle floating-point precision
+        var aX:Int = Math.round(x * HASH_PRECISION);
+        var aY:Int = Math.round(y * HASH_PRECISION);
+        
+        // Compute individual hashes for both points using the same primes
+        var hashA:Int = (aX * prime1 + aY * prime2) % MODULUS;
+
+        return hashA;
+    }
 
 
     public static function computeCentroid2D(vertices:Array<Point2D>):Point2D {
@@ -51,6 +71,6 @@ class Point2D {
         var n = vertices.length;
         return new Point2D(x / n, y / n);
     }
-
+    
 }
 

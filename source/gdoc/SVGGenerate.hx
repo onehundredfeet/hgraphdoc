@@ -54,7 +54,7 @@ class SVGGenerate {
         File.saveContent(path, svgContent.toString());
     }
 
-    public static function writePointField(path : String,field:PointField2D, frame: Frame = null) {
+    public static function writePointField(path : String,field:PointField2D, frame: Frame = null, stylizer : (Point2D, SVGNodeAttributes) -> Void = null) {
         var svgContent = startSVG(); 
         var bounds = Rect2D.infiniteEmpty();
 
@@ -78,6 +78,11 @@ class SVGGenerate {
         for (point in field) {
             var x = (point.x - bounds.xmin) * uni_scale + frame.margin;
             var y = frame.height - ((point.y - bounds.ymin) * uni_scale + frame.margin);
+            attr.x = x;
+            attr.y = y;
+            if (stylizer != null) {
+                stylizer(point, attr);
+            }
             svgContent.add('<circle cx="${x}" cy="${y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
         }
 
