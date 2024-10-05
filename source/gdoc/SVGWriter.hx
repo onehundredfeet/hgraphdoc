@@ -13,6 +13,50 @@ class SVGAttributes {
     public var halignment : String;
 }
 
+class ImageFrame {
+    public function new(width : Float = 1000.0, height : Float = 1000.0, margin : Float = 100.0) {
+        this.width = width;
+        this.height = height;
+        this.margin = margin;
+
+    }
+
+    public function transformX( x : Float ) : Float {
+        return (x - bounds.xmin) * scale + margin;
+    }
+    public function transformY( y : Float ) : Float {
+        if (flipY) {
+            return height - ((y - bounds.ymin) * scale + margin);
+        }
+        return (y - bounds.ymin) * scale + margin;        
+    }
+
+    public static function generateFrameOrDefault( frame : ImageFrame, bounds: Rect2D, width : Float = 1000.0, height : Float = 1000.0, margin : Float = 100.0 ) {
+        if (frame != null) {
+            frame = new ImageFrame( frame.width, frame.height, frame.margin);
+        } else {
+            frame = new ImageFrame( width, height, margin);
+        }
+
+        var range_x = bounds.width;
+        var range_y = bounds.height;
+        var x_scale = (width - 2 * margin) / (range_x);
+        var y_scale = (height - 2 * margin) / (range_y);
+        frame.scale = x_scale < y_scale ? x_scale : y_scale;
+        frame.bounds = bounds;
+
+        return frame;
+    }
+    public var width : Float;
+    public var height : Float;
+    public var margin : Float;
+
+    public var scale(default,null) : Float = 1.0;
+    public var bounds(default,null) : Rect2D;
+    var flipY : Bool = false;
+}
+
+
 class SVGWriter {
     var _buffer = new StringBuf();
     public var defaultFill = "lightblue";
@@ -20,9 +64,21 @@ class SVGWriter {
     public var defaultFont = "Arial";
     public var defaultHAlignment = "middle";
 
+    var frame : ImageFrame;
+    var bounds : Rect2D;
+
     public function new() {
         addHeader();
     }
+
+    public function bound( b : Rect2D, flipY: Bool, f : ImageFrame = null) {
+        bounds = b;
+        frame = ImageFrame.generateFrameOrDefault(f, bounds);
+        @:privateAccess frame.flipY = flipY;
+
+    }
+
+
     private function addHeader( ) {
         _buffer.add('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n');
         _buffer.add('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n');
@@ -41,30 +97,40 @@ class SVGWriter {
     }
 
     private function addFillStroke( attr : SVGAttributes ) {
-        if (attr.fill != null) {
+        if (attr != null && attr.fill != null) {
             _buffer.add(' fill="${attr.fill}"');
         } else {
             _buffer.add(' fill="${defaultFill}"');
         }
-        if (attr.stroke != null) {
+        if (attr != null && attr.stroke != null) {
             _buffer.add(' stroke="${attr.stroke}"');
         } else {
             _buffer.add(' stroke="${defaultStroke}"');
         }
     }
     private function addStroke( attr : SVGAttributes ) {
-        if (attr.stroke != null) {
+        if (attr != null && attr.stroke != null) {
             _buffer.add(' stroke="${attr.stroke}"');
         } else {
             _buffer.add(' stroke="${defaultStroke}"');
         }
     }
-    public function polygon( points : Array<Point2D>, attr : SVGAttributes ) {
+    public function triangle( tri: Triangle2D, attr : SVGAttributes = null) {
+        //'<polygon points="${ax},${ay} ${bx},${by} ${cx},${cy}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+        _buffer.add('\t<polygon points="${frame.transformX(tri.a.x)},${frame.transformY(tri.a.y)} ${frame.transformX(tri.b.x)},${frame.transformY(tri.b.y)} ${frame.transformX(tri.c.x)},${frame.transformY(tri.c.y)}"');
+        addFillStroke(attr);
+        _buffer.add('/>\n');
+    }
+    public function polygon( points : Array<Point2D>, attr : SVGAttributes = null) {
         //'<polygon points="${ax},${ay} ${bx},${by} ${cx},${cy}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
 
         _buffer.add('\t<polygon points="');
         for (p in points) {
-            _buffer.add('${p.x},${p.y} ');
+            if (frame != null) {
+                _buffer.add('${frame.transformX(p.x)},${frame.transformY(p.y)} ');
+            } else  {
+                _buffer.add('${p.x},${p.y} ');
+            }
         }
         _buffer.add('"');
         addFillStroke(attr);
