@@ -2,17 +2,14 @@ package gdoc;
 import sys.io.File;
 import gdoc.NodeGraph;
 import gdoc.PowerDiagram;
+import gdoc.SVGWriter;
 
-class SVGNodeAttributes {
-    public function new() {
-
-    }
-    public var x : Float;
-    public var y : Float;
+class SVGPrimAttributes extends SVGAttributes {
+    public var x0 : Float;
+    public var y0 : Float;
+    public var x1 : Float;
+    public var y1 : Float;
     public var r : Float;
-    public var fill : String;
-    public var stroke : String;
-    public var text : String;
     public var recursive : Bool;
 }
 
@@ -82,8 +79,9 @@ class SVGGenerate {
     }
 
     public static function writeTriangles( path: String, triangles : Array<Triangle2D>, frame: Frame = null) {
-        var svgContent = startSVG(); 
-        var attr = new SVGNodeAttributes();
+        var writer = new SVGWriter();
+
+        var attr = new SVGPrimAttributes();
         attr.fill = "lightblue";
         attr.stroke = "black";
         attr.recursive = true;
@@ -105,15 +103,14 @@ class SVGGenerate {
             var by = frame.transformY(b.y);
             var cx = frame.transformX(c.x);
             var cy = frame.transformY(c.y);
-
-            svgContent.add('<polygon points="${ax},${ay} ${bx},${by} ${cx},${cy}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+            writer.polygon([new Point2D(ax, ay), new Point2D(bx, by), new Point2D(cx, cy)], attr);
         }
 
-        finishSVG(path, svgContent);
+        writer.finishAndWrite(path);
     }
 
-    public static function writePointField(path : String,field:PointField2D, frame: Frame = null, stylizer : (Point2D, SVGNodeAttributes) -> Void = null) {
-        var svgContent = startSVG(); 
+    public static function writePointField(path : String,field:PointField2D, frame: Frame = null, stylizer : (Point2D, SVGPrimAttributes) -> Void = null) {
+       var writer = new SVGWriter();
         var bounds = Rect2D.infiniteEmpty();
 
         bounds.expandToIncludePoints(field);
@@ -121,7 +118,7 @@ class SVGGenerate {
 
         var uni_scale = frame.scale;
 
-        var attr = new SVGNodeAttributes();
+        var attr = new SVGPrimAttributes();
 
         attr.r = Math.min(bounds.width, bounds.height) / 50.0;
         attr.fill = "lightblue";
@@ -132,21 +129,21 @@ class SVGGenerate {
         for (point in field) {
             var x = (point.x - bounds.xmin) * uni_scale + frame.margin;
             var y = frame.height - ((point.y - bounds.ymin) * uni_scale + frame.margin);
-            attr.x = x;
-            attr.y = y;
+            attr.x0 = x;
+            attr.y0 = y;
             if (stylizer != null) {
                 stylizer(point, attr);
             }
-            svgContent.add('<circle cx="${x}" cy="${y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+            writer.circle(attr.x0, attr.y0, attr.r, attr);
         }
 
-        finishSVG(path, svgContent);
+        writer.finishAndWrite(path);
     }
 
     public static function writePowerDiagram(path : String,diagram: Map<Int, PowerCell>, centers : Array<WeightedPoint2D>, frame: Frame = null) {
-        var svgContent = startSVG(); 
+        var writer = new SVGWriter();
         
-        var attr = new SVGNodeAttributes();
+        var attr = new SVGPrimAttributes();
 
         var bounds = Rect2D.infiniteEmpty();
 
@@ -177,28 +174,31 @@ class SVGGenerate {
             for (i in 0...cell.value.length) {
                 var p0 = transformPoint(cell.value[i]);
                 var p1 = transformPoint(cell.value[(i + 1) % cell.value.length]);
-                svgContent.add('<line x1="${p0.x}" y1="${p0.y}" x2="${p1.x}" y2="${p1.y}" stroke="black" />\n');
+                writer.line(p0.x, p0.y, p1.x, p1.y, attr);
+//                svgContent.add('<line x1="${p0.x}" y1="${p0.y}" x2="${p1.x}" y2="${p1.y}" stroke="black" />\n');
             }
 
             var originalCenter = centers[cell.key];
 
             final PRECISION = 1e-3;
             var center = transformPoint(new Point2D(originalCenter.x, originalCenter.y));
-            svgContent.add('<circle cx="${center.x}" cy="${center.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
-            svgContent.add('<text x="${center.x}" y="${center.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]</text>\n');
+            writer.circle(center.x, center.y, attr.r, attr);
+//            svgContent.add('<circle cx="${center.x}" cy="${center.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+//            svgContent.add('<text x="${center.x}" y="${center.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]</text>\n');
+            writer.text('${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]', center.x, center.y + 5, attr);
         }
         
-        finishSVG(path, svgContent);
+        writer.finishAndWrite(path);
     }
 
-    public static function writeNodeGraph( path : String, graph : NodeGraph, attrFn : ( Node, SVGNodeAttributes) -> Void = null, frame: Frame = null ) {
+    public static function writeNodeGraph( path : String, graph : NodeGraph, attrFn : ( Node, SVGPrimAttributes) -> Void = null, frame: Frame = null ) {
         var svgContent = startSVG();        
 
         // Define nodes with positions
         var nodes = graph.nodes;
 
         // Draw nodes as circles and add labels
-        var attr = new SVGNodeAttributes();
+        var attr = new SVGPrimAttributes();
         var min_x = 100000.0;
         var min_y = 100000.0;
         var max_x = -100000.0;
@@ -220,9 +220,9 @@ class SVGGenerate {
         var uni_scale = x_scale < y_scale ? x_scale : y_scale;
 
 
-        function drawNode2D( node : Node, attr : SVGNodeAttributes) {
-            attr.x = (node.x - min_x) * uni_scale + margin;
-            attr.y = (node.y - min_y) * uni_scale + margin;
+        function drawNode2D( node : Node, attr : SVGPrimAttributes) {
+            attr.x0 = (node.x - min_x) * uni_scale + margin;
+            attr.y0 = (node.y - min_y) * uni_scale + margin;
             
             attr.r = 1.0;
             attr.fill = "lightblue";
@@ -234,28 +234,28 @@ class SVGGenerate {
             }
             attr.r = attr.r * uni_scale;
 
-            svgContent.add('<circle cx="${attr.x}" cy="${height - attr.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
+            svgContent.add('<circle cx="${attr.x0}" cy="${height - attr.y0}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
 
             for (connection in node.getNonChildrenOutgoingEdges()) {
                 var target = cast(connection.target, Node);
                 var target_x = (target.x - min_x) * uni_scale + margin;
                 var target_y = (target.y - min_y) * uni_scale + margin;
 
-                var delta_x = target_x - attr.x;
-                var delta_y = target_y - attr.y;
+                var delta_x = target_x - attr.x0;
+                var delta_y = target_y - attr.y0;
                 var length = Math.sqrt(delta_x * delta_x + delta_y * delta_y);
                 delta_x /= length;
                 delta_y /= length;
 
-                var x0 = attr.x + delta_x * attr.r* 1.5;
-                var y0 = attr.y + delta_y * attr.r* 1.5;
+                var x0 = attr.x0 + delta_x * attr.r* 1.5;
+                var y0 = attr.y0 + delta_y * attr.r* 1.5;
                 var x1 = target_x - delta_x * attr.r * 1.5;
                 var y1 = target_y - delta_y * attr.r* 1.5;
                 svgContent.add('<line x1="${x0}" y1="${height - y0}" x2="${x1}" y2="${height - y1}" stroke="black" marker-end="url(#arrow)" />\n');
             }
             
             if (attr.text != null) {
-                svgContent.add('<text x="${attr.x}" y="${height - (attr.y + 5)}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
+                svgContent.add('<text x="${attr.x0}" y="${height - (attr.y0 + 5)}" text-anchor="middle" font-size="12px" font-family="Arial">${attr.text}</text>\n');
             }
 
             if (attr.recursive && node.hasChildren()) {
