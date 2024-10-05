@@ -92,4 +92,44 @@ abstract Line2D(Point3D) from Point3D {
 
         return segmentIntersectsCircle(p1, p2, center, radius);
     }
+
+    public static function segmentDistanceToPoint(a:Point2D, b:Point2D, p:Point2D):Float {
+        var dx = b.x - a.x;
+        var dy = b.y - a.y;
+        
+        if (dx == 0 && dy == 0) {
+            // a and b are the same point
+            return p.distanceTo( a);
+        }
+        
+        // Calculate the projection parameter t of point p onto the line segment
+        var t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
+        
+        if (t < 0) {
+            // Beyond point a
+            return p.distanceTo( a);
+        } else if (t > 1) {
+            // Beyond point b
+            return p.distanceTo( b);
+        } else {
+            // Projection falls on the segment
+            var projection = new Point2D(a.x + t * dx, a.y + t * dy);
+            return p.distanceTo( projection);
+        }
+    }
+
+    public static function segmentDistanceToSegment(a1:Point2D, a2:Point2D, b1:Point2D, b2:Point2D):Float {
+        // If segments intersect, the distance is zero
+        if (segmentsIntersect(a1, a2, b1, b2)) {
+            return 0.0;
+        }
+        
+        // Otherwise, the distance is the minimum of the distances from the endpoints to the opposite segments
+        var d1 = segmentDistanceToPoint(a1, b1, b2);
+        var d2 = segmentDistanceToPoint(a2, b1, b2);
+        var d3 = segmentDistanceToPoint(b1, a1, a2);
+        var d4 = segmentDistanceToPoint(b2, a1, a2);
+        
+        return Math.min(Math.min(d1, d2), Math.min(d3, d4));
+    }
 }

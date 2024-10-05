@@ -180,11 +180,7 @@ class Triangle2D {
     }
 
 
-    public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {
-        if (isDegenerate()) {
-            return false; 
-        }
-        
+    public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {        
         if (containsPoint(p1) || containsPoint(p2)) {
             return true; 
         }
@@ -210,6 +206,25 @@ class Triangle2D {
         if (Line2D.segmentIntersectsCircle(b, c, center, radius)) return true;
         if (Line2D.segmentIntersectsCircle(c, a, center, radius)) return true;
         
+        return false; 
+    }
+
+    public function overlapsThickSegment(segStart:Point2D, segEnd:Point2D, distance:Float):Bool {
+        if (intersectsLineSegment(segStart, segEnd)) {
+            return true; 
+        }
+        // Check if any vertex of the triangle is within the specified distance from the segment
+        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.a) <= distance) return true;
+        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.b) <= distance) return true;
+        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.c) <= distance) return true;
+        
+        // Check if any endpoint of the segment lies within the specified distance from the triangle
+        // This involves checking the distance from the segment endpoints to the triangle's edges
+        if (Line2D.segmentDistanceToSegment(a, b, segStart, segEnd) <= distance) return true;
+        if (Line2D.segmentDistanceToSegment(b, c, segStart, segEnd) <= distance) return true;
+        if (Line2D.segmentDistanceToSegment(c, a, segStart, segEnd) <= distance) return true;
+        
+                
         return false; 
     }
 
