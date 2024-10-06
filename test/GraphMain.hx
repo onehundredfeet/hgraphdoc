@@ -1379,7 +1379,9 @@ class GraphMain {
 		// Test with a square
 		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
 		var spacing = 2.0;
-		var pointField = square.generatePointField( spacing);
+        var edgePoints = square.generateEdgePoints( spacing );
+        var interiorPoints = square.generateInteriorPoints( spacing, 0.0, edgePoints);
+		var pointField = edgePoints.concat(interiorPoints);
 
         SVGGenerate.writePointField("pf_square.svg", pointField );
 

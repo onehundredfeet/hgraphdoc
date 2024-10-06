@@ -21,14 +21,18 @@ class ImageFrame {
 
     }
 
-    public function transformX( x : Float ) : Float {
+    public inline function transformX( x : Float ) : Float {
         return (x - bounds.xmin) * scale + margin;
     }
-    public function transformY( y : Float ) : Float {
+    public inline function transformY( y : Float ) : Float {
         if (flipY) {
             return height - ((y - bounds.ymin) * scale + margin);
         }
         return (y - bounds.ymin) * scale + margin;        
+    }
+
+    public inline function transformLength( l : Float ) : Float {
+        return l * scale;
     }
 
     public static function generateFrameOrDefault( frame : ImageFrame, bounds: Rect2D, width : Float = 1000.0, height : Float = 1000.0, margin : Float = 100.0 ) {
@@ -139,14 +143,14 @@ class SVGWriter {
 
     public function circle( center_x : Float, center_y: Float, radius : Float, attr : SVGAttributes ) {
         //'<circle cx="${cx}" cy="${cy}" r="${r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
-        _buffer.add('\t<circle cx="${center_x}" cy="${center_y}" r="${radius}"');
+        _buffer.add('\t<circle cx="${frame.transformX(center_x)}" cy="${frame.transformY(center_y)}" r="${frame.transformLength(radius)}"');
         addFillStroke(attr);
         _buffer.add('/>\n');
     }
 
     public function line( start_x : Float, start_y : Float,end_x:Float, end_y:Float, attr : SVGAttributes ) {
         //'<line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${attr.stroke}"/>\n');
-        _buffer.add('\t<line x1="${start_x}" y1="${start_y}" x2="${end_x}" y2="${end_y}"');
+        _buffer.add('\t<line x1="${frame.transformX(start_x)}" y1="${frame.transformY(start_y)}" x2="${frame.transformX(end_x)}" y2="${frame.transformY(end_y)}"');
         addStroke(attr);
         _buffer.add('/>\n');
     }
@@ -155,12 +159,12 @@ class SVGWriter {
         // svgContent.add('<text x="${center.x}" y="${center.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]</text>\n');
         var font = attr.font != null ? attr.font : defaultFont;
         var halignment = attr.halignment != null ? attr.halignment : defaultHAlignment;
-        _buffer.add('\t<text x="${position_x}" y="${position_y}" text-anchor="${halignment}" font-size="${attr.fontSize}px" font-family="${font}">${text}</text>\n');
+        _buffer.add('\t<text x="${frame.transformX(position_x)}" y="${frame.transformY(position_y)}" text-anchor="${halignment}" font-size="${attr.fontSize}px" font-family="${font}">${text}</text>\n');
     }
 
     public function lineArrow( start : Point2D, end_x:Float, end_y:Float, attr : SVGAttributes ) {
         //'<line x1="${start.x}" y1="${start.y}" x2="${end_x}" y2="${end_y}" stroke="${attr.stroke}" marker-end="url(#arrow)"/>\n');
-        _buffer.add('\t<line x1="${start.x}" y1="${start.y}" x2="${end_x}" y2="${end_y}"');
+        _buffer.add('\t<line x1="${frame.transformX(start.x)}" y1="${frame.transformY(start.y)}" x2="${end_x}" y2="${end_y}"');
         addStroke(attr);
         _buffer.add(' marker-end="url(#arrow)"/>\n');
     }

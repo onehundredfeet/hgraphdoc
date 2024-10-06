@@ -19,7 +19,7 @@ abstract PointField2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
             }
             var list = visited.get(key);
             for (c in list) {
-                if (c.p.withinSqared(p, dsquared)) {
+                if (c.p.withinSquaredPoint(p, dsquared)) {
                     return c.i;
                 }
             }

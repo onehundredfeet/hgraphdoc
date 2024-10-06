@@ -37,31 +37,64 @@ abstract Line2D(Point3D) from Point3D {
         return new Point2D(x, y);
     }
 
-
-    public static function segmentsIntersect(a:Point2D, b:Point2D, c:Point2D, d:Point2D, includeVertices = false):Bool {
-        if (includeVertices) {
-            if (a == c || a == d || b == c || b == d) return true;
-        } else {
-            if (a == c || a == d || b == c || b == d) return false;
+    // By cross product
+    public static function segmentsIntersect(p1:Point2D, q1:Point2D, p2:Point2D, q2:Point2D):Bool {
+        // Compute vectors
+        var d1 = q1.subtract(p1);
+        var d2 = q2.subtract(p2);
+        
+        // Compute vectors between points
+        var r = p2.subtract(p1);
+        var s = q2.subtract(p2);
+        
+        // Compute cross products
+        var cross_r_s = d1.crossProduct(d2);
+        var cross_r_r = d1.crossProduct(r);
+        var cross_s_r = s.crossProduct(r);
+        
+        // Check if segments are parallel
+        if (Math.abs(cross_r_s) < EPSILON) {
+            if (Math.abs(cross_r_r) < EPSILON) {
+                // Colinear segments - check for overlap
+                // Project onto x and y axes and check for overlapping intervals
+                var t0 = (p2.x - p1.x) / (d1.x != 0 ? d1.x : EPSILON);
+                var t1 = (q2.x - p1.x) / (d1.x != 0 ? d1.x : EPSILON);
+                
+                if (d1.x == 0) { // Vertical lines, use y-axis
+                    t0 = (p2.y - p1.y) / d1.y;
+                    t1 = (q2.y - p1.y) / d1.y;
+                }
+                
+                var t_min = Math.min(t0, t1);
+                var t_max = Math.max(t0, t1);
+                
+                if (t_min > 1 + EPSILON || t_max < -EPSILON) {
+                    return false; // No overlap
+                }
+                return true; // Overlapping
+            }
+            return false; // Parallel and non-colinear
         }
-
-        var o1 = Point2D.orientation(a, b, c);
-        var o2 = Point2D.orientation(a, b, d);
-        var o3 = Point2D.orientation(c, d, a);
-        var o4 = Point2D.orientation(c, d, b);
-
-        if (o1 != o2 && o3 != o4) return true;
-
-        return false;
+        
+        // Compute parameters t and u
+        var t = r.crossProduct(d2) / cross_r_s;
+        var u = r.crossProduct(d1) / cross_r_s;
+        
+        // Check if t and u are within the segment ranges
+        if (t >= -EPSILON && t <= 1 + EPSILON && u >= -EPSILON && u <= 1 + EPSILON) {
+            return true; // Intersection occurs within the segments
+        }
+        
+        return false; // No intersection within the segments
     }
 
     static inline final EPSILON = 1e-12;
 
-    public static function segmentIntersectsCircle(p1:Point2D, p2:Point2D, center:Point2D, radius:Float):Bool {
+    public static function segmentIntersectsCircle(p1:Point2D, p2:Point2D, center_x:Float, center_y: Float, radius:Float):Bool {
         var dx = p2.x - p1.x;
         var dy = p2.y - p1.y;
-        var fx = p1.x - center.x;
-        var fy = p1.y - center.y;
+        var fx = p1.x - center_x;
+        var fy = p1.y - center_y;
         
         var a = dx * dx + dy * dy;
         var b = 2 * (fx * dx + fy * dy);
@@ -84,20 +117,20 @@ abstract Line2D(Point3D) from Point3D {
         return false; 
     }
 
-    public static function segmentOverlapsCircle(p1:Point2D, p2:Point2D, center:Point2D, radius:Float) {
+    public static function segmentOverlapsCircle(p1:Point2D, p2:Point2D, center_x : Float, center_y : Float, radius:Float) {
         final r2 = radius * radius;
-        var point1Inside = center.withinSqared(p1, r2);
-        var point2Inside = center.withinSqared(p2, r2);
+        var point1Inside = Point2D.withinSquaredXYXY(center_x, center_y, p1.x, p1.y, r2);
+        var point2Inside = Point2D.withinSquaredXYXY(center_x, center_y, p2.x, p2.y, r2);
         if (point1Inside || point2Inside) return true;
 
-        return segmentIntersectsCircle(p1, p2, center, radius);
+        return segmentIntersectsCircle(p1, p2, center_x, center_y, radius);
     }
 
     public static function segmentDistanceToPoint(a:Point2D, b:Point2D, p:Point2D):Float {
         var dx = b.x - a.x;
         var dy = b.y - a.y;
         
-        if (dx == 0 && dy == 0) {
+        if (Math.abs(dx) < EPSILON && Math.abs(dy) < EPSILON) {
             // a and b are the same point
             return p.distanceTo( a);
         }
@@ -107,7 +140,8 @@ abstract Line2D(Point3D) from Point3D {
         
         if (t < 0) {
             // Beyond point a
-            return p.distanceTo( a);
+            var d = p.distanceTo( a);
+            return d;
         } else if (t > 1) {
             // Beyond point b
             return p.distanceTo( b);

@@ -102,29 +102,17 @@ class SVGGenerate {
             bounds.expandToIncludePoints(cell);
         }
 
-        frame = ImageFrame.generateFrameOrDefault(frame, bounds);
+        writer.bound(bounds,true);
 
-        var range_x = bounds.width;
-        var range_y = bounds.height;
-        var x_scale = (frame.width - 2 * frame.margin) / (range_x);
-        var y_scale = (frame.height - 2 * frame.margin) / (range_y);
-        var uni_scale = x_scale < y_scale ? x_scale : y_scale;
-
-        attr.r = Math.min(range_x, range_y) / 20.0;
+        attr.r = Math.min(bounds.width, bounds.height) / 20.0;
         attr.fill = "lightblue";
         attr.stroke = "black";
         attr.recursive = true;
-        attr.r = attr.r * uni_scale;
 
-        function transformPoint( p : Point2D) : Point2D {
-            var x = (p.x - bounds.xmin) * uni_scale + frame.margin;
-            var y = frame.height - ((p.y - bounds.ymin) * uni_scale + frame.margin);
-            return new Point2D(x, y);
-        }
         for (cell in diagram.keyValueIterator()) {
             for (i in 0...cell.value.length) {
-                var p0 = transformPoint(cell.value[i]);
-                var p1 = transformPoint(cell.value[(i + 1) % cell.value.length]);
+                var p0 = cell.value[i];
+                var p1 = cell.value[(i + 1) % cell.value.length];
                 writer.line(p0.x, p0.y, p1.x, p1.y, attr);
 //                svgContent.add('<line x1="${p0.x}" y1="${p0.y}" x2="${p1.x}" y2="${p1.y}" stroke="black" />\n');
             }
@@ -132,11 +120,10 @@ class SVGGenerate {
             var originalCenter = centers[cell.key];
 
             final PRECISION = 1e-3;
-            var center = transformPoint(new Point2D(originalCenter.x, originalCenter.y));
-            writer.circle(center.x, center.y, attr.r, attr);
+            writer.circle(originalCenter.x, originalCenter.y, attr.r, attr);
 //            svgContent.add('<circle cx="${center.x}" cy="${center.y}" r="${attr.r}" fill="${attr.fill}" stroke="${attr.stroke}"/>\n');
 //            svgContent.add('<text x="${center.x}" y="${center.y + 5}" text-anchor="middle" font-size="12px" font-family="Arial">${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]</text>\n');
-            writer.text('${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]', center.x, center.y + 5, attr);
+            writer.text('${cell.key}[${Math.round(originalCenter.z / PRECISION)* PRECISION}]', originalCenter.x, originalCenter.y + 5, attr);
         }
         
         writer.finishAndWrite(path);

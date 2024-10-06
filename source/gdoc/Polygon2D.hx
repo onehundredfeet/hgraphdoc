@@ -77,8 +77,6 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 			var numSegments = Math.ceil(length / spacing);
 			for (j in 1...numSegments) {
 				var t = j / numSegments;
-				if (t >= 1.0)
-					continue; // Exclude the endpoint
 				var x = pi.x + t * dx;
 				var y = pi.y + t * dy;
 				edgePoints.push(new Point2D(x, y));
@@ -87,22 +85,19 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		return edgePoints;
 	}
 
-	// Generate the complete point field
-	public function generatePointField(spacing:Float):PointField2D {
-		var edgePoints = generateEdgePoints(spacing);
-		var interiorPoints = generateInteriorPoints(spacing, edgePoints);
-		return edgePoints.concat(interiorPoints);
-	}
 
 	// Generate Poisson-disc distributed points within the polygon considering edge points
-	public function generateInteriorPoints(minDistance:Float, avoidPoints:Array<Point2D> = null, rejectionThreshold = 30):Array<Point2D> {
+	public function generateInteriorPoints(minDistance:Float, margin: Float = 0.0, avoidPoints:Array<Point2D> = null, avoidanceDistance : Null<Float> = null, rejectionThreshold = 30):Array<Point2D> {
 		var bbox = Rect2D.fromPoints(this);
 		var cellSize = minDistance / Math.sqrt(2);
 
+        if (avoidanceDistance == null) {
+            avoidanceDistance = minDistance;
+        }
 		// Initialize grid
 		var gridWidth = Math.ceil((bbox.xmax - bbox.xmin) / cellSize);
 		var gridHeight = Math.ceil((bbox.ymax - bbox.ymin) / cellSize);
-		var grid:Array<Array<Point2D>> = [];
+		var grid:Array<Array<WeightedPoint2D>> = [];
 
         grid.resize(gridWidth * gridHeight);
 
@@ -113,23 +108,40 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 			return gy * gridWidth + gx;
 		}
 
-        function addPointToGrid(p:Point2D) {
+        function addPointToGrid(p:Point2D, d : Float) {
             var index = getGridIndex(p);
             if (grid[index] == null) {
-                grid[index] = new Array<Point2D>();
+                grid[index] = new Array<WeightedPoint2D>();
             }
-            grid[index].push(p);
+            grid[index].push(new WeightedPoint2D(p.x, p.y, d* d));
         }
 
 		
 		var points = new Array<Point2D>();
 		var activeList = new Array<Point2D>();
 
+        function isWithinMargin(p:Point2D):Bool {
+            if (margin == 0.0) {
+                return false;
+            }
+            for (i in 0...this.length) {
+                var a = this[i];
+                var b = this[(i + 1) % this.length];
+                var distance = Line2D.segmentDistanceToPoint(a, b, p);
+                if (distance < margin) {
+                    return true;
+                }
+            }
+            return false;
+        }
 		// Function to check if point is valid
 		function isValidPoint(p:Point2D):Bool {
 			if (!containsPoint(p))
 				return false;
 
+            if (isWithinMargin(p)) {
+                return false;
+            }
 			var gx = Math.floor((p.x - bbox.xmin) / cellSize);
 			var gy = Math.floor((p.y - bbox.ymin) / cellSize);
 
@@ -144,7 +156,7 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 					var neighbors = grid[index];
 					if (neighbors != null) {
 						for (neighbor in neighbors) {
-							if (p.distanceTo(neighbor) < minDistance) {
+							if (p.withinSquaredXY(neighbor.x, neighbor.y, neighbor.weight)) {
 								return false;
 							}
 						}
@@ -157,7 +169,7 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		if (avoidPoints != null) {
 			// Add edge points to the grid
 			for (ep in avoidPoints) {
-                addPointToGrid(ep);
+                addPointToGrid(ep, avoidanceDistance);
 			}
 		}
 
@@ -169,14 +181,14 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 			var y = Math.random() * (bbox.ymax - bbox.ymin) + bbox.ymin;
 			initialPoint = new Point2D(x, y);
 			attempts++;
-			if (attempts > 1000) {
+			if (attempts > 2000) {
 				throw 'Unable to find initial point inside polygon';
 			}
 		} while (!isValidPoint(initialPoint));
 
 		points.push(initialPoint);
 		activeList.push(initialPoint);
-        addPointToGrid(initialPoint);
+        addPointToGrid(initialPoint, minDistance);
 
 		while (activeList.length > 0) {
 			var randomIndex = Std.int(Math.random() * activeList.length);
@@ -191,7 +203,7 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 				if (isValidPoint(newPoint)) {
 					points.push(newPoint);
 					activeList.push(newPoint);
-                    addPointToGrid(newPoint);
+                    addPointToGrid(newPoint, minDistance);
 					found = true;
 					break;
 				}
@@ -236,4 +248,21 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		}
 		return perimeter;
 	}
+
+    public function computeConvexArea():Float {
+        var n = this.length;
+        if (n < 3) {
+            throw ("A polygon must have at least three vertices.");
+        }
+
+        // shoelace formula
+        var sum:Float = 0;
+        for (i in 0...n) {
+            var current = this[i];
+            var next = this[(i + 1) % n]; // Wrap around to the first point
+            sum += (current.x * next.y) - (next.x * current.y);
+        }
+
+        return 0.5 * Math.abs(sum);
+    }
 }

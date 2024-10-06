@@ -35,15 +35,47 @@ class HalfEdgeFace2D {
     }
 }
 
+class HalfEdgeGeometryConstructor {
+    public function new(vertex : (x : Float, y : Float, id : Int) -> HalfEdge2DVertex2D, edge : () -> HalfEdge2D, face : () -> HalfEdgeFace2D) {
+        this.vertex = vertex;
+        this.edge = edge;
+        this.face = face;
+    }
+    public var vertex : (x : Float, y : Float, id : Int) -> HalfEdge2DVertex2D;
+    public var edge : () -> HalfEdge2D;
+    public var face : () -> HalfEdgeFace2D;
+}
+
+class HalfEdgeRemapCB {
+    public var vertex : (Point2D, HalfEdge2DVertex2D) -> Void;
+    public var triangle : (Triangle2D, HalfEdgeFace2D) -> Void;
+    public var polygon : (Array<Point2D>, HalfEdgeFace2D) -> Void;
+}
+
 class HalfEdgeMesh2D {
     public var vertices:Array<HalfEdge2DVertex2D>;
     public var edges:Array<HalfEdge2D>;
     public var faces:Array<HalfEdgeFace2D>;
 
-    public function new() {
+    var _constructor: HalfEdgeGeometryConstructor;
+
+    static var _defaultConstructor = new HalfEdgeGeometryConstructor(
+        function(x:Float, y:Float, id:Int) {
+            return new HalfEdge2DVertex2D(x, y, id);
+        },
+        function() {
+            return new HalfEdge2D();
+        },
+        function() {
+            return new HalfEdgeFace2D();
+        }
+    );
+
+    public function new(constructor : HalfEdgeGeometryConstructor = null) {
         vertices = new Array<HalfEdge2DVertex2D>();
         edges = new Array<HalfEdge2D>();
         faces = new Array<HalfEdgeFace2D>();
+        _constructor = constructor == null ? _defaultConstructor : constructor;
     }
 
     private var _nextID:Int = 0; // For assigning unique indices to vertices
@@ -53,13 +85,57 @@ class HalfEdgeMesh2D {
 
     // Adds a vertex to the mesh and returns its index
     public function addVertex(x:Float, y:Float):HalfEdge2DVertex2D {
-        var vertex = new HalfEdge2DVertex2D(x, y, _nextID++);
+        var vertex = _constructor.vertex(x, y, _nextID++);
         vertices.push(vertex);
         return vertex;
     }
 
+    public static function fromTrianglesRemap(triangles:Array<Triangle2D>, constructor: HalfEdgeGeometryConstructor = null, remap : HalfEdgeRemapCB = null) {
+        var mesh = new HalfEdgeMesh2D(constructor);
+        var vertexMap = new Map<Point2D, HalfEdge2DVertex2D>();
+
+        for (t in triangles) {
+            var a = t.a;
+            var b = t.b;
+            var c = t.c;
+
+            var va = vertexMap.get(a);
+            if (va == null) {
+                va = mesh.addVertex(a.x, a.y);
+                if (remap != null && remap.vertex != null) {
+                    remap.vertex(a, va);
+                }
+                vertexMap.set(a, va);
+            }
+
+            var vb = vertexMap.get(b);
+            if (vb == null) {
+                vb = mesh.addVertex(b.x, b.y);
+                if (remap != null && remap.vertex != null) {
+                    remap.vertex(b, vb);
+                }
+                vertexMap.set(b, vb);
+            }
+
+            var vc = vertexMap.get(c);
+            if (vc == null) {
+                vc = mesh.addVertex(c.x, c.y);
+                if (remap != null && remap.vertex != null) {
+                    remap.vertex(c, vc);
+                }
+                vertexMap.set(c, vc);
+            }
+
+            var face = mesh.addFace([va, vb, vc]);
+            if (remap != null && remap.triangle != null) {
+                remap.triangle(t, face);
+            }
+        }
+
+        return mesh;
+    }
     public function addFace(vertexes:Array<HalfEdge2DVertex2D>) {
-        var face = new HalfEdgeFace2D();
+        var face = _constructor.face();
         faces.push(face);
     
         var numVertices = vertexes.length;
@@ -67,7 +143,7 @@ class HalfEdgeMesh2D {
     
         // Create half-edges for the face
         for (i in 0...numVertices) {
-            var he = new HalfEdge2D();
+            var he = _constructor.edge();
             edges.push(he);
             faceEdges.push(he);
             he.face = face;
@@ -108,13 +184,15 @@ class HalfEdgeMesh2D {
         }
     
         face.edge = faceEdges[0];
+
+        return face;
     }
     
 
 
     // Computes the dual of the mesh
-    public function computeDual():HalfEdgeMesh2D {
-        var dualMesh = new HalfEdgeMesh2D();
+    public function computeDual(constructor : HalfEdgeGeometryConstructor = null):HalfEdgeMesh2D {
+        var dualMesh = new HalfEdgeMesh2D(constructor);
 
         // Maps to keep track of associations between original and dual elements
         var faceToDualVertex = new Map<HalfEdgeFace2D, HalfEdge2DVertex2D>();
@@ -144,14 +222,14 @@ class HalfEdgeMesh2D {
 
         // Create dual faces for each vertex
         for (v in vertices) {
-            var dualFace = new HalfEdgeFace2D();
+            var dualFace = dualMesh._constructor.face();
             dualMesh.faces.push(dualFace);
             vertexToDualFace.set(v, dualFace);
         }
 
         // Create dual half-edges
         for (he in edges) {
-            var dualHe = new HalfEdge2D();
+            var dualHe = dualMesh._constructor.edge();
             dualMesh.edges.push(dualHe);
             halfEdgeToDualHalfEdge2D.set(he, dualHe);
         }

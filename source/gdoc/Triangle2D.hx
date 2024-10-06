@@ -32,9 +32,7 @@ class Triangle2D {
         return Math.abs((b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y)) < EPSILON;
     }
 
-    public function containsPoint(p: Point2D): Bool {
-        var x = p.x;
-        var y = p.y;
+    public function containsXY(x : Float, y : Float): Bool {
         var x1 = this.a.x;
         var y1 = this.a.y;
         var x2 = this.b.x;
@@ -51,6 +49,10 @@ class Triangle2D {
         var c = 1 - a - b;
         
         return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+    }
+
+    public inline function containsPoint(p: Point2D): Bool {
+        return containsXY(p.x, p.y);
     }
 
 	public function toString():String {
@@ -185,26 +187,33 @@ class Triangle2D {
             return true; 
         }
 
-        if (Line2D.segmentsIntersect(p1, p2, a, b) || Line2D.segmentsIntersect(p1, p2, b, c) || Line2D.segmentsIntersect(p1, p2, c, a)) {
+        if (Line2D.segmentsIntersect(p1, p2, a, b)) {
             return true;
         }
+        if (Line2D.segmentsIntersect(p1, p2, b, c)) {
+            return true;
+        }
+        if (Line2D.segmentsIntersect(p1, p2, c, a)) {
+            return true;
+        }
+
                 
         return false; 
     }
 
     
-    public function overlapsCircle(center:Point2D, radius:Float):Bool {
+    public function overlapsCircle(center_x : Float, center_y : Float, radius:Float):Bool {
         var r2 = (radius + EPSILON) * (radius + EPSILON);
 
-        if (a.withinSqared(center, r2)) return true;
-        if (b.withinSqared(center, r2)) return true;
-        if (c.withinSqared(center, r2)) return true;
+        if (a.withinSquaredXY(center_x,center_y, r2)) return true;
+        if (b.withinSquaredXY(center_x,center_y, r2)) return true;
+        if (c.withinSquaredXY(center_x,center_y, r2)) return true;
         
-        if (containsPoint(center)) return true;
+        if (containsXY(center_x, center_y)) return true;
 
-        if (Line2D.segmentIntersectsCircle(a, b, center, radius)) return true;
-        if (Line2D.segmentIntersectsCircle(b, c, center, radius)) return true;
-        if (Line2D.segmentIntersectsCircle(c, a, center, radius)) return true;
+        if (Line2D.segmentIntersectsCircle(a, b, center_x, center_y, radius)) return true;
+        if (Line2D.segmentIntersectsCircle(b, c, center_x, center_y,radius)) return true;
+        if (Line2D.segmentIntersectsCircle(c, a, center_x, center_y,radius)) return true;
         
         return false; 
     }
@@ -213,16 +222,17 @@ class Triangle2D {
         if (intersectsLineSegment(segStart, segEnd)) {
             return true; 
         }
-        // Check if any vertex of the triangle is within the specified distance from the segment
+        // // Check if any vertex of the triangle is within the specified distance from the segment
         if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.a) <= distance) return true;
         if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.b) <= distance) return true;
         if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.c) <= distance) return true;
         
         // Check if any endpoint of the segment lies within the specified distance from the triangle
         // This involves checking the distance from the segment endpoints to the triangle's edges
-        if (Line2D.segmentDistanceToSegment(a, b, segStart, segEnd) <= distance) return true;
-        if (Line2D.segmentDistanceToSegment(b, c, segStart, segEnd) <= distance) return true;
-        if (Line2D.segmentDistanceToSegment(c, a, segStart, segEnd) <= distance) return true;
+        // Something is wrong in here:
+        // if (Line2D.segmentDistanceToSegment(a, b, segStart, segEnd) <= distance) return true;
+        // if (Line2D.segmentDistanceToSegment(b, c, segStart, segEnd) <= distance) return true;
+        // if (Line2D.segmentDistanceToSegment(c, a, segStart, segEnd) <= distance) return true;
         
                 
         return false; 

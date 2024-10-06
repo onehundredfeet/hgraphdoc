@@ -37,9 +37,21 @@ class Point2D {
     public function eqval( p:Point2D, epsilon:Float = 1e-12):Bool {
         return Math.abs(this.x - p.x) < epsilon && Math.abs(this.y - p.y) < epsilon;
     }
-    public inline function withinSqared( p:Point2D, distanceSquared:Float):Bool {
+    public inline function withinSquaredXY( x:Float, y:Float, distanceSquared:Float):Bool {
+        var dx = this.x - x;
+        var dy = this.y - y;
+        return dx * dx + dy * dy <= distanceSquared;
+    }
+
+    public inline function withinSquaredPoint( p:Point2D, distanceSquared:Float):Bool {
         var dx = this.x - p.x;
         var dy = this.y - p.y;
+        return dx * dx + dy * dy <= distanceSquared;
+    }
+
+    public static inline function withinSquaredXYXY( x:Float, y:Float, px:Float, py:Float, distanceSquared:Float):Bool {
+        var dx = x - px;
+        var dy = y - py;
         return dx * dx + dy * dy <= distanceSquared;
     }
 
@@ -60,6 +72,13 @@ class Point2D {
         return hashA;
     }
 
+    public inline function subtract(p2:Point2D):Point2D {
+        return new Point2D(this.x - p2.x, this.y - p2.y);
+    }
+
+    public inline function crossProduct(v2:Point2D):Float {
+        return this.x * v2.y - this.y * v2.x;
+    }
 
     public static function computeCentroid2D(vertices:Array<Point2D>):Point2D {
         var x = 0.0;
