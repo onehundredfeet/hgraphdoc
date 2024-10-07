@@ -205,21 +205,22 @@ class Node extends Element  {
 
 
 class NodeGraph {
-    var _nextId = 0;
+    var _nextNodeId = 0;
+    var _nextEdgeId = 0;
 
     public function new() {
 
     }
 
     public function addNode(name : String = null)  {
-        var n = @:privateAccess new Node(_nextId++);
+        var n = @:privateAccess new Node(_nextNodeId++);
         _nodes.push(n);
         n.name = name;
         return n;
     }
 
     public function connectNodes(source : Node, target : Node, relation : String = null) {
-        var arc =  @:privateAccess new Edge(_nextId++);
+        var arc =  @:privateAccess new Edge(_nextEdgeId++);
         _edges.push(arc);
         arc.source = source;
         arc.target = target;
@@ -401,6 +402,113 @@ class NodeGraph {
         var n = getNodeFromID(id);
         if (n != null) return n;
         return getEdgeFromID(id);
+    }
+
+    public static function fromTriangeCenters(triangles: Array<Triangle2D>, bidirectional = false, triangleAttribute : String = null) : NodeGraph {
+        var graph = new NodeGraph();
+        var triToInt = new Map<Triangle2D, Int>();
+        var pointToID = new Map<Point2D, Int>();
+        var points = new Array<Point2D>();
+        var pointCount = 0;
+        var edges = new Map<Int, {a:Triangle2D, b:Triangle2D}>();
+
+        inline function addPointToMap(p:Point2D) {
+            if (!pointToID.exists(p)) {
+                pointToID.set(p, pointCount++);
+                points.push(p);
+            }
+            return pointToID.get(p);
+        }
+
+        inline function keyForPointPair(a:Point2D, b:Point2D) {
+            var aid = pointToID.get(a);
+            var bid = pointToID.get(b);
+            if (aid < bid) {
+                return (aid << 16) | bid;
+            } else {
+                return (bid << 16) | aid;
+            }
+        }
+
+        function traceEdge(a:Point2D, b:Point2D, t:Triangle2D) {
+            var edgekey = keyForPointPair(a, b);
+            if (edges.exists(edgekey)) {
+                var edge = edges.get(edgekey);
+                if (edge.b == null) {
+                    edge.b = t;
+                    var otherTri = edge.a;
+                    var node = graph.nodes[triToInt.get(t)];
+                    var otherNode = graph.nodes[triToInt.get(otherTri)];
+                    graph.connectNodes(node, otherNode, "connected");
+                    if (bidirectional) {
+                        graph.connectNodes(otherNode, node, "connected");
+                    }
+                } else {
+                    throw 'Non-manifold geometry';
+                }
+            } else {
+                edges.set(edgekey, {a:t, b:null});
+            }        
+        }
+
+        // id's don't line up
+        for (i in 0...triangles.length) {
+            var t = triangles[i];
+            var center = t.calculateCenter();
+
+            triToInt.set(t, i);
+
+            var n = graph.addNode();
+            n.x = center.x;
+            n.y = center.y;
+            
+            if (triangleAttribute != null) {
+                n.properties.set(triangleAttribute, t);
+            }
+
+            addPointToMap(t.a);
+            addPointToMap(t.b);
+            addPointToMap(t.c);
+        }
+
+        for (i in 0...triangles.length) {
+            var t = triangles[i];
+
+            traceEdge(t.a, t.b, t);
+            traceEdge(t.b, t.c, t);
+            traceEdge(t.c, t.a, t);
+        }
+
+        return graph;
+    }
+
+    public function closestMatchByConnections(start : Node, fn: (Node) -> Bool, bidirectional : Bool = true) : { node : Node, length : Int } {
+        var open = new List<Node>();
+        var jumps = new haxe.ds.IntMap<Int>();
+        jumps.set(start.id, 0);
+
+        function pushConnections(n : Node, depth : Int) {
+            var connections = bidirectional ? n.connections : n.getOutgoingEdges();
+            for (c in connections) {
+                if (jumps.exists(c.target.id)) continue;
+                open.add(c.target);
+                jumps.set(c.target.id, depth);
+                if (fn(c.target)) return c.target;
+            }
+            return null;
+        }
+        open.add(start);
+
+        var next = null;
+        while((next = open.pop()) != null) {
+            var result = pushConnections(next, jumps.get(next.id) + 1);
+            if (result != null) {
+                return { node : result, length : jumps.get(result.id) };
+            }
+        }
+
+        return null;
+        
     }
 }
 
