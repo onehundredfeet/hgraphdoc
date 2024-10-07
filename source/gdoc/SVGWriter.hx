@@ -68,7 +68,7 @@ class SVGWriter {
     public var defaultFont = "Arial";
     public var defaultHAlignment = "middle";
 
-    var frame : ImageFrame;
+    public var frame(default, null) : ImageFrame;
     var bounds : Rect2D;
 
     public function new() {

@@ -61,13 +61,13 @@ class SVGGenerate {
     }
 
     public static function writePointField(path : String,field:PointField2D, frame: ImageFrame = null, stylizer : (Point2D, SVGPrimAttributes) -> Void = null) {
-       var writer = new SVGWriter();
+        var writer = new SVGWriter();
         var bounds = Rect2D.infiniteEmpty();
 
         bounds.expandToIncludePoints(field);
         writer.bound(bounds, true, frame);
 
-        var uni_scale = frame.scale;
+        var uni_scale = writer.frame.scale;
 
         var attr = new SVGPrimAttributes();
 
