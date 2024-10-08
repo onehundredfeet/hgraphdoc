@@ -380,6 +380,39 @@ class NodeGraph {
 		return n;
 	}
 
+    public function breakIntersection( e0 : Edge, e1 : Edge, nodeName : String) : Node {
+        var n0 = e0.source;
+        var n1 = e0.target;
+        var n2 = e1.source;
+        var n3 = e1.target;
+        var intersection = Line2D.segmentIntersectionXY(n0.x, n0.y, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y);
+        if (intersection == null) {
+            return null;
+        }
+
+        // insert node
+        var newNode = addNode(nodeName);
+        newNode.x = intersection.x;
+        newNode.y = intersection.y;
+
+        var ne0 = connectNodes(n0, newNode, e0.name);
+        var ne1 = connectNodes(newNode, n1, e0.name);
+        var ne2 = connectNodes(n2, newNode, e1.name);
+        var ne3 = connectNodes(newNode, n3, e1.name);
+
+        for (p in e0.properties.keyValueIterator()) {
+            ne0.properties.set(p.key, p.value);
+            ne1.properties.set(p.key, p.value);
+        }
+        for (p in e1.properties.keyValueIterator()) {
+            ne2.properties.set(p.key, p.value);
+            ne3.properties.set(p.key, p.value);
+        }
+        removeEdge(e0);
+        removeEdge(e1);
+        return newNode;
+    }
+
 	public function removeEdge(edge:Edge) {
 		// trace('Removing edge ${edge.name} : ${edge.source.name} -> ${edge.target.name}');
 		edge.source.connections.remove(edge);
