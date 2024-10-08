@@ -54,6 +54,12 @@ class Rect2D {
         if (p.y < this.ymin) this.ymin = p.y;
         if (p.y > this.ymax) this.ymax = p.y;
     }
+    public inline function expandToIncludeXY( x:Float, y:Float ):Void {
+        if (x < this.xmin) this.xmin = x;
+        if (x > this.xmax) this.xmax = x;
+        if (y < this.ymin) this.ymin = y;
+        if (y > this.ymax) this.ymax = y;
+    }
     public function expandToIncludePoints(points:Array<Point2D>):Void {
         for (p in points) {
             this.expandToInclude(p);

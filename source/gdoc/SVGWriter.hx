@@ -164,7 +164,14 @@ class SVGWriter {
 
     public function lineArrow( start : Point2D, end_x:Float, end_y:Float, attr : SVGAttributes ) {
         //'<line x1="${start.x}" y1="${start.y}" x2="${end_x}" y2="${end_y}" stroke="${attr.stroke}" marker-end="url(#arrow)"/>\n');
-        _buffer.add('\t<line x1="${frame.transformX(start.x)}" y1="${frame.transformY(start.y)}" x2="${end_x}" y2="${end_y}"');
+        _buffer.add('\t<line x1="${frame.transformX(start.x)}" y1="${frame.transformY(start.y)}" x2="${frame.transformX(end_x)}" y2="${frame.transformY(end_y)}"');
+        addStroke(attr);
+        _buffer.add(' marker-end="url(#arrow)"/>\n');
+    }
+
+    public function lineArrowXY( x0 : Float, y0 : Float, x1 : Float, y1 : Float, attr : SVGAttributes ) {
+        //'<line x1="${start.x}" y1="${start.y}" x2="${end_x}" y2="${end_y}" stroke="${attr.stroke}" marker-end="url(#arrow)"/>\n');
+        _buffer.add('\t<line x1="${frame.transformX(x0)}" y1="${frame.transformY(y0)}" x2="${frame.transformX(x1)}" y2="${frame.transformY(y1)}"');
         addStroke(attr);
         _buffer.add(' marker-end="url(#arrow)"/>\n');
     }
