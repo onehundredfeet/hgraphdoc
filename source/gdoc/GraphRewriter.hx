@@ -144,6 +144,11 @@ abstract class ElementMatch {
 	abstract function get_element():GraphElement;
 
 	public abstract function remap(g:Graph):ElementMatch;
+
+	public function toString() : String {
+		return 'ElementMatch(${element})';
+	}
+
 }
 
 typedef MatchVector = Array<ElementMatch>;
@@ -161,7 +166,11 @@ class EdgeMatch extends ElementMatch {
 
 	function remap(g:Graph):ElementMatch {
 		var newEdge = g.getEdgeFromID(edge.id);
-		// trace('Remapped edge ${edge.id} -> ${newEdge}');
+//		trace('Remapped edge ${edge.id} -> ${newEdge}');
+		if (newEdge == null) {
+			trace('Graph edges: ${g.edges}');
+			throw('Graph does not contain edge ${edge.id}');
+		}
 		var newSource:NodeMatch = source != null ? cast(source.remap(g), NodeMatch) : null;
 		var newTarget:NodeMatch = target != null ? cast(target.remap(g), NodeMatch) : null;
 
@@ -171,6 +180,10 @@ class EdgeMatch extends ElementMatch {
 	public final edge:Edge;
 	public final source:NodeMatch;
 	public final target:NodeMatch;
+
+	public override function toString() : String {
+		return 'EdgeMatch(${edge} ${source} ${target})';
+	}
 }
 
 class NodeMatch extends ElementMatch {
@@ -200,6 +213,9 @@ class NodeMatch extends ElementMatch {
 		return new NodeMatch(newNode, newEdges);
 	}
 
+	public override  function toString() : String {
+		return 'NodeMatch(${node})';
+	}
 	public final node:Node;
 	public var edges:Map<String, EdgeMatch>;
 }
@@ -350,7 +366,7 @@ class EdgePattern extends Pattern {
 }
 
 class MetaContext {
-	public function new(graph:Graph, user:Dynamic = null, propertyPolicy:EMetaValue = EMetaValue.ECopy) {
+	public function new(graph:Graph, user:Dynamic = null, propertyPolicy:EMetaValue = EMetaValue.MVCopy) {
 		this.graph = graph;
 		this.user = user;
 		this.propertyPolicy = propertyPolicy;
@@ -367,7 +383,7 @@ enum EMetaString {
 	MStrEmpty;
 	MStrCopy;
 	MStrLiteral(string:String);
-	MStrRewrite(regex:EReg, sub:String);
+	MVStrRewrite(regex:EReg, sub:String);
 	MStrFn(fn:(MetaElement, String, Dynamic) -> String);
 }
 
@@ -377,37 +393,37 @@ function generateString(element:MetaElement, generator:EMetaString, value:String
 		case MStrEmpty: "";
 		case MStrCopy: value;
 		case MStrLiteral(s): s;
-		case MStrRewrite(r, sub): r.replace(value, sub);
+		case MVStrRewrite(r, sub): r.replace(value, sub);
 		case MStrFn(f): f(element, value, context.user);
 	}
 }
 
 enum EMetaValue {
-	EClear;
-	EDefault;
-	ENull;
-	EStrEmpty;
-	ECopy;
-	EString(string:String);
-	EInt(int:Int);
-	EFloat(float:Float);
-	EBool(bool:Bool);
-	MStrRewrite(regex:EReg, sub:String);
-	EFn(fn:(MetaElement, MatchVector, Dynamic) -> Dynamic);
+	MVClear;
+	MVDefault;
+	MVNull;
+	MVStrEmpty;
+	MVCopy;
+	MVString(string:String);
+	MVInt(int:Int);
+	MVFloat(float:Float);
+	MVBool(bool:Bool);
+	MVStrRewrite(regex:EReg, sub:String);
+	MVFn(fn:(MetaElement, MatchVector, Dynamic) -> Dynamic);
 }
 
 function generateValue(element:MetaElement, matched:MatchVector, generator:EMetaValue, value:Dynamic, context:MetaContext):Dynamic {
 	return switch (generator) {
-		case EDefault: context.propertyPolicy != EDefault ? generateValue(element, matched, context.propertyPolicy, value, context) : null;
-		case EClear, ENull: null;
-		case EString(s): s;
-		case EInt(i): i;
-		case EFloat(f): f;
-		case EBool(b): b;
-		case EFn(f): f(element, matched, context.user);
-		case ECopy: value;
-		case EStrEmpty: "";
-		case MStrRewrite(r, sub): value is String ? r.replace(cast(value, String), sub) : null;
+		case MVDefault: context.propertyPolicy != MVDefault ? generateValue(element, matched, context.propertyPolicy, value, context) : null;
+		case MVClear, MVNull: null;
+		case MVString(s): s;
+		case MVInt(i): i;
+		case MVFloat(f): f;
+		case MVBool(b): b;
+		case MVFn(f): f(element, matched, context.user);
+		case MVCopy: value;
+		case MVStrEmpty: "";
+		case MVStrRewrite(r, sub): value is String ? r.replace(cast(value, String), sub) : null;
 	}
 }
 
@@ -430,7 +446,7 @@ class MetaElement {
 				var existingValue = element.properties.get(prop.key);
 				switch (generator) {
 					case null:
-					case EMetaValue.EClear:
+					case EMetaValue.MVClear:
 						element.properties.remove(prop.key);
 						break;
 					default:
@@ -445,7 +461,7 @@ class MetaElement {
 				}
 			}
 
-			if (context.propertyPolicy == EMetaValue.EClear) {
+			if (context.propertyPolicy == EMetaValue.MVClear) {
 				for (lo in leftovers) {
 					element.properties.remove(lo);
 				}
@@ -455,7 +471,7 @@ class MetaElement {
 				}
 			}
 		} else {
-			if (context.propertyPolicy != EMetaValue.EClear) {
+			if (context.propertyPolicy != EMetaValue.MVClear) {
 				for (prop in element.properties.keyValueIterator()) {
 					element.properties.set(prop.key, generateValue(this, match, context.propertyPolicy, element.properties.get(prop.key), context));
 				}
@@ -468,7 +484,7 @@ class MetaElement {
 	public function generateProperties(element:Element, match:MatchVector, context:MetaContext) {
 		if (properties != null) {
 			for (prop in properties.keyValueIterator()) {
-				if (prop.value != null && prop.value != EMetaValue.EClear) {
+				if (prop.value != null && prop.value != EMetaValue.MVClear) {
 					element.properties.set(prop.key, generateValue(this, match, prop.value, null, context));
 				}
 			}
@@ -629,6 +645,11 @@ class OpSplitEdge extends Operation {
 		var edgeMatch = cast(match, EdgeMatch);
 		var edge = edgeMatch.edge;
 
+
+		if (edge == null) {
+			trace('matches ${matches}');
+			throw 'Match is null!! Something is broken';
+		}
 		var source = edge.source;
 		var target = edge.target;
 
@@ -795,11 +816,14 @@ class Rule {
 		var pattern = patterns[0];
 		var rest = patterns.slice(1);
 
-		// trace('Looking for pattern ${pattern}');
+		//trace('Looking for pattern ${pattern}');
 		for (v in variations) {
 			var elements = getMatchingElements(v, pattern, graph);
 			if (elements != null && elements.length > 0) {
-				// trace('Found with v ${v} : ${elements.length} elements ${elements}');
+				//trace('Found with v ${v} : ${elements.length}');
+				// for (e in elements) {
+				// 	trace('\t${e}');
+				// }
 				for (e in elements) {
 					var newVariation = v.slice(0);
 					newVariation.push(e);
@@ -875,22 +899,30 @@ class GraphRewriter {
 		var context = new MetaContext(graph, user);
 		context.graph = graph;
 		var topScore = Math.NEGATIVE_INFINITY;
-		var topGraph:Graph = null;
 		var topOperation:Operation = null;
+		var topVariation:MatchVector = null;
 
+		trace('Finding best variation');
 		for (r in rules) {
 			var ruleVariations = r.findAllVariations(graph);
 			if (ruleVariations != null) {
-				// trace('ruleVariations: $ruleVariations');
+				trace('ruleVariations: $ruleVariations');
 				for (v in ruleVariations) {
+					trace('Cloning graph');
 					var newGraph = graph.clone();
 					context.graph = newGraph;
 
+					trace('remapping graph');
 					var v1 = v.map((e) -> return e.remap(newGraph));
+
+					trace('Applying  ${r.operation} with variation ${v1}');
 					if (r.apply(v1, context)) {
+
+						trace('Scoring...');
 						var accum = 0.0;
 						var valid = true;
 						for (f in fitness) {
+							trace('Scoring with ${f}');
 							var x = f(newGraph);
 							if (x == null) {
 								valid = false;
@@ -898,20 +930,28 @@ class GraphRewriter {
 							}
 							accum += x;
 						}
-						// trace('Score is ${score} vs ${topScore}');
+						trace('Score is ${accum} vs ${topScore}');
 						if (valid && accum > topScore) {
 							topScore = accum;
-							topGraph = newGraph;
 							topOperation = r.operation;
+							topVariation = v;
 						}
+					} else {
+						trace('Operation failed');
 					}
 				}
+			} else {
+				trace('No variations for rule ${r}');
 			}
 		}
 
+		trace('Applying best variation');
 		if (topOperation != null) {
-			trace('TOP OPERATION ${topOperation}');
+			context.graph = graph;
+			//trace('TOP OPERATION ${topOperation} with variation ${topVariation}');
+			topOperation.apply(topVariation, context);
+			return true;
 		}
-		return topGraph;
+		return false;
 	}
 }

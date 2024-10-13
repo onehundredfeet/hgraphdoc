@@ -152,6 +152,33 @@ abstract Line2D(Point3D) from Point3D {
         }
     }
 
+    public static function segmentDistanceToPointXY(ax : Float, ay: Float, bx : Float, by:Float, px : Float, py:Float):Float {
+        var dx = bx - ax;
+        var dy = by - ay;
+        
+        if (Math.abs(dx) < EPSILON && Math.abs(dy) < EPSILON) {
+            // a and b are the same point
+            return Point2D.distanceToXY(px, py, ax, ay);
+        }
+        
+        // Calculate the projection parameter t of point p onto the line segment
+        var t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+        
+        if (t < 0) {
+            // Beyond point a
+            var d = Point2D.distanceToXY(px, py, ax, ay);
+            return d;
+        } else if (t > 1) {
+            // Beyond point b
+            return Point2D.distanceToXY(px, py, bx, by);
+        } else {
+            // Projection falls on the segment
+            var projx = ax + t * dx;
+            var projy = ay + t * dy;
+            return Point2D.distanceToXY(px, py, projx, projy);
+        }
+    }
+
     public static function segmentDistanceToSegment(a1:Point2D, a2:Point2D, b1:Point2D, b2:Point2D):Float {
         // If segments intersect, the distance is zero
         if (segmentsIntersect(a1, a2, b1, b2)) {

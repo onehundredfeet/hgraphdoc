@@ -48,6 +48,25 @@ class Rect2D {
         return new Rect2D( minX, minY, maxX, maxY );
     }
 
+    public static function fromGraph(g:NodeGraph):Rect2D {
+        if (g.nodes.length == 0) {
+            return new Rect2D(0, 0, 0, 0);
+        }
+
+        var minX = g.nodes[0].x;
+        var maxX = g.nodes[0].x;
+        var minY = g.nodes[0].y;
+        var maxY = g.nodes[0].y;
+        for (n in g.nodes) {
+            if (n.x < minX) minX = n.x;
+            if (n.x > maxX) maxX = n.x;
+            if (n.y < minY) minY = n.y;
+            if (n.y > maxY) maxY = n.y;
+        }
+
+        return new Rect2D( minX, minY, maxX, maxY );
+    }
+
     public inline function expandToInclude(p:Point2D):Void {
         if (p.x < this.xmin) this.xmin = p.x;
         if (p.x > this.xmax) this.xmax = p.x;

@@ -1,4 +1,5 @@
 package gdoc;
+import seedyrng.Random;
 
 @:forward
 @:forward.new
@@ -87,7 +88,10 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 
 
 	// Generate Poisson-disc distributed points within the polygon considering edge points
-	public function generateInteriorPoints(minDistance:Float, margin: Float = 0.0, avoidPoints:Array<Point2D> = null, avoidanceDistance : Null<Float> = null, rejectionThreshold = 30):Array<Point2D> {
+	public function generateInteriorPoints(minDistance:Float, margin: Float = 0.0, avoidPoints:Array<Point2D> = null, avoidanceDistance : Null<Float> = null, rejectionThreshold = 30, random:Random = null):Array<Point2D> {
+		if (random == null) {
+			random = new Random();
+		}
 		var bbox = Rect2D.fromPoints(this);
 		var cellSize = minDistance / Math.sqrt(2);
 
@@ -177,8 +181,8 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		var initialPoint:Point2D;
 		var attempts = 0;
 		do {
-			var x = Math.random() * (bbox.xmax - bbox.xmin) + bbox.xmin;
-			var y = Math.random() * (bbox.ymax - bbox.ymin) + bbox.ymin;
+			var x = random.random() * (bbox.xmax - bbox.xmin) + bbox.xmin;
+			var y = random.random() * (bbox.ymax - bbox.ymin) + bbox.ymin;
 			initialPoint = new Point2D(x, y);
 			attempts++;
 			if (attempts > 2000) {
@@ -191,12 +195,12 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
         addPointToGrid(initialPoint, minDistance);
 
 		while (activeList.length > 0) {
-			var randomIndex = Std.int(Math.random() * activeList.length);
+			var randomIndex = Std.int(random.random() * activeList.length);
 			var point = activeList[randomIndex];
 			var found = false;
 			for (_ in 0...rejectionThreshold) {
-				var radius = minDistance + minDistance * Math.random();
-				var angle = Math.random() * Math.PI * 2;
+				var radius = minDistance + minDistance * random.random();
+				var angle = random.random() * Math.PI * 2;
 				var newX = point.x + radius * Math.cos(angle);
 				var newY = point.y + radius * Math.sin(angle);
 				var newPoint = new Point2D(newX, newY);

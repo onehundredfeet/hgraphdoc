@@ -20,14 +20,27 @@ class Element {
 			other.properties.set(prop.key, prop.value);
 		}
 	}
+
+	public function toString():String {
+		return 'Element(${name}, ${id})';
+	}
 }
+
+final CHILD_RELATION = "_CHILD";
 
 class Edge extends Element {
 	public var source:Node;
 	public var target:Node;
+
+    public function isChildRelation() {
+        return name == CHILD_RELATION;
+    }
+	public override function toString():String {
+		return 'Edge(${name}, ${id})';
+	}
 }
 
-final CHILD_RELATION = "_CHILD";
+
 
 // Node is a bit heavy, but we're not making giant graphs
 class Node extends Element {
@@ -46,6 +59,12 @@ class Node extends Element {
 	public var x:Float;
 	public var y:Float;
 
+    public function distanceTo(n:Node):Float {
+        return Math.sqrt((n.x - x) * (n.x - x) + (n.y - y) * (n.y - y));
+    }
+    public function distanceToSquared(n:Node):Float {
+        return (n.x - x) * (n.x - x) + (n.y - y) * (n.y - y);
+    }
 	// any
 	public inline function getEdges():Array<Edge> {
 		return connections;
@@ -119,6 +138,10 @@ class Node extends Element {
 		return false;
 	}
 
+	public function countOutgoing() : Int {
+		return connections.count((x) -> x.source == this);
+	}
+
 	// incoming
 	public inline function getIncomingEdges():Array<Edge> {
 		return connections.filter((x) -> (x.target == this));
@@ -145,6 +168,10 @@ class Node extends Element {
 
 	public function getIncomingNodesByNot(relation:String):Array<Node> {
 		return connections.filter((x) -> (x.target == this && x.name != relation)).map((x) -> x.source);
+	}
+
+	public function countIncoming() : Int {
+		return connections.count((x) -> x.target == this);
 	}
 
 	// hierarchy
@@ -231,6 +258,10 @@ class Node extends Element {
 		}
 
 		return null;
+	}
+
+	public override function toString():String {
+		return 'Node(${name}, ${id})';
 	}
 }
 
@@ -361,23 +392,28 @@ class NodeGraph {
 		node.connections.resize(0);
 	}
 
-	public function splitEdge(edge:Edge, nodeName:String = null) {
-		var source = edge.source;
+	public inline function splitEdge(edge:Edge, nodeName:String = null) {
+        var node = insertNodeIntoEdge(edge, addNode(nodeName));
+        var source = edge.source;
+        var target = edge.target;
+        node.x = (source.x + target.x) / 2;
+		node.y = (source.y + target.y) / 2;
+        return node;
+	}
+
+    public function insertNodeIntoEdge(edge:Edge, node:Node) {
 		var target = edge.target;
 		target.connections.remove(edge);
 
-		var n = addNode(nodeName);
-		edge.target = n;
-		n.connections.push(edge);
-		n.x = (source.x + target.x) / 2;
-		n.y = (source.y + target.y) / 2;
+		edge.target = node;
+		node.connections.push(edge);
 
-		var newEdge = connectNodes(n, target, edge.name);
+		var newEdge = connectNodes(node, target, edge.name);
 		// Copy properties
 		for (p in edge.properties.keyValueIterator()) {
 			newEdge.properties.set(p.key, p.value);
 		}
-		return n;
+		return node;
 	}
 
     public function breakIntersection( e0 : Edge, e1 : Edge, nodeName : String) : Node {
@@ -385,6 +421,7 @@ class NodeGraph {
         var n1 = e0.target;
         var n2 = e1.source;
         var n3 = e1.target;
+
         var intersection = Line2D.segmentIntersectionXY(n0.x, n0.y, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y);
         if (intersection == null) {
             return null;
@@ -450,11 +487,11 @@ class NodeGraph {
 		return [for (k in names.keys()) k];
 	}
 
-	public function clone(cloneFn:(src:Element, tgt:Element) -> Void = null):NodeGraph {
-		var g = new NodeGraph();
+	function copyContentsFrom(other:NodeGraph, cloneFn:(src:Element, tgt:Element) -> Void = null) {
 		var nodeMap = new haxe.ds.IntMap<Node>();
-		for (n in _nodes) {
-			var n2 = g.addNode();
+		
+		for (n in other._nodes) {
+			var n2 = addNode();
 			if (cloneFn != null)
 				cloneFn(n, n2);
 			else {
@@ -463,17 +500,21 @@ class NodeGraph {
 
 			nodeMap.set(n.id, n2);
 		}
-		for (e in _edges) {
+		for (e in other._edges) {
 			var src = nodeMap.get(e.source.id);
 			var tgt = nodeMap.get(e.target.id);
-			var e2 = g.connectNodes(src, tgt, e.name);
+			var e2 = connectNodes(src, tgt, e.name);
 			if (cloneFn != null)
 				cloneFn(e, e2);
 			else {
 				@:privateAccess e.cloneTo(e2);
 			}
+			@:privateAccess e2.id = e.id;
 		}
-
+	}
+	public function clone(cloneFn:(src:Element, tgt:Element) -> Void = null):NodeGraph {
+		var g = new NodeGraph();
+		g.copyContentsFrom(this, cloneFn);
 		return g;
 	}
 
@@ -627,5 +668,26 @@ class NodeGraph {
         }
 
 		return null;
+	}
+
+	public function isAcyclicFrom(root:Node) : Bool {
+		function scanNode(path: Map<Node, Bool>, n : Node) : Bool{
+			path.set(n, true);
+
+			for (c in n.getOutgoingEdges()) {
+				if (path.exists(c.target)) {
+					return false;
+				}
+				if (!scanNode(path, c.target)) {
+					return false;
+				}
+			}
+
+			path.remove(n);
+
+			return true;
+		}
+		
+		return scanNode([], root);
 	}
 }

@@ -25,7 +25,14 @@ class Point2D {
     }
 
     public function distanceTo(p:Point2D):Float {
-        return Math.sqrt(Math.pow(this.x - p.x, 2) + Math.pow(this.y - p.y, 2));
+        var dx = this.x - p.x;
+        var dy = this.y - p.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    public static function distanceToXY(ax:Float, ay:Float, bx : Float, by: Float):Float {
+        var dx = ax - bx;
+        var dy = ay - by;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     // returns positive if p3 is to the left of the line p1->p2
