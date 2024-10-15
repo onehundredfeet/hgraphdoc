@@ -158,7 +158,7 @@ abstract Line2D(Point3D) from Point3D {
         
         if (Math.abs(dx) < EPSILON && Math.abs(dy) < EPSILON) {
             // a and b are the same point
-            return Point2D.distanceToXY(px, py, ax, ay);
+            return Point2D.pointDistanceToXY(px, py, ax, ay);
         }
         
         // Calculate the projection parameter t of point p onto the line segment
@@ -166,16 +166,16 @@ abstract Line2D(Point3D) from Point3D {
         
         if (t < 0) {
             // Beyond point a
-            var d = Point2D.distanceToXY(px, py, ax, ay);
+            var d = Point2D.pointDistanceToXY(px, py, ax, ay);
             return d;
         } else if (t > 1) {
             // Beyond point b
-            return Point2D.distanceToXY(px, py, bx, by);
+            return Point2D.pointDistanceToXY(px, py, bx, by);
         } else {
             // Projection falls on the segment
             var projx = ax + t * dx;
             var projy = ay + t * dy;
-            return Point2D.distanceToXY(px, py, projx, projy);
+            return Point2D.pointDistanceToXY(px, py, projx, projy);
         }
     }
 
@@ -219,5 +219,30 @@ abstract Line2D(Point3D) from Point3D {
 
 		// No intersection
 		return null;
+	}
+
+    public static function areSegmentsIntersectingXY(x1:Float, y1:Float, x2:Float, y2:Float, x3:Float, y3:Float, x4:Float, y4:Float) : Bool {
+		var s1x = x2 - x1;
+		var s1y = y2 - y1;
+		var s2x = x4 - x3;
+		var s2y = y4 - y3;
+
+		var denominator = (-s2x * s1y + s1x * s2y);
+
+		if (denominator == 0) {
+			// Lines are parallel or colinear
+			return false;
+		}
+
+		var s = (-s1y * (x1 - x3) + s1x * (y1 - y3)) / denominator;
+		var t = (s2x * (y1 - y3) - s2y * (x1 - x3)) / denominator;
+
+		if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+			// Intersection detected
+			return true;
+		}
+
+		// No intersection
+		return false;
 	}
 }

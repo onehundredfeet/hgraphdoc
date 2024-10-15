@@ -29,7 +29,12 @@ class Point2D {
         var dy = this.y - p.y;
         return Math.sqrt(dx * dx + dy * dy);
     }
-    public static function distanceToXY(ax:Float, ay:Float, bx : Float, by: Float):Float {
+    public function distanceToXY(x:Float, y:Float):Float {
+        var dx = this.x - x;
+        var dy = this.y - y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    public static function pointDistanceToXY(ax:Float, ay:Float, bx : Float, by: Float):Float {
         var dx = ax - bx;
         var dy = ay - by;
         return Math.sqrt(dx * dx + dy * dy);
