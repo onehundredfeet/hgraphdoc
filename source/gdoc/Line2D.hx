@@ -152,6 +152,54 @@ abstract Line2D(Point3D) from Point3D {
         }
     }
 
+    public static function segmentPointClosestToPointXY(ax : Float, ay: Float, bx : Float, by:Float, px : Float, py:Float):Point2D {
+        var dx = bx - ax;
+        var dy = by - ay;
+        
+        if (Math.abs(dx) < EPSILON && Math.abs(dy) < EPSILON) {
+            // a and b are the same point
+            return new Point2D(ax, ay);
+        }
+        
+        // Calculate the projection parameter t of point p onto the line segment
+        var t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+        
+        if (t < 0) {
+            return new Point2D(ax, ay);
+        } else if (t > 1) {
+            return new Point2D(bx, by);
+        } else {
+            // Projection falls on the segment
+            var projx = ax + t * dx;
+            var projy = ay + t * dy;
+            return new Point2D(projx, projy);
+        } 
+    }
+
+    public static function segmentPointTClosestToPointXY(ax : Float, ay: Float, bx : Float, by:Float, px : Float, py:Float):{x:Float, y:Float, t:Float} {
+        var dx = bx - ax;
+        var dy = by - ay;
+        
+        if (Math.abs(dx) < EPSILON && Math.abs(dy) < EPSILON) {
+            // a and b are the same point
+            return {x:ax, y:ay, t:0};
+        }
+        
+        // Calculate the projection parameter t of point p onto the line segment
+        var t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+        
+        if (t < 0) {
+            return {x:ax, y:ay, t:0};
+        } else if (t > 1) {
+            return {x:bx, y:by, t:1};
+        } else {
+            // Projection falls on the segment
+            var projx = ax + t * dx;
+            var projy = ay + t * dy;
+            return {x:projx, y:projy, t:t};
+        } 
+    }
+
     public static function segmentDistanceToPointXY(ax : Float, ay: Float, bx : Float, by:Float, px : Float, py:Float):Float {
         var dx = bx - ax;
         var dy = by - ay;
@@ -178,6 +226,8 @@ abstract Line2D(Point3D) from Point3D {
             return Point2D.pointDistanceToXY(px, py, projx, projy);
         }
     }
+
+
 
     public static function segmentDistanceToSegment(a1:Point2D, a2:Point2D, b1:Point2D, b2:Point2D):Float {
         // If segments intersect, the distance is zero

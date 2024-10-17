@@ -701,7 +701,7 @@ class NodeGraph {
 				continue;
 			}
 			if (Line2D.areSegmentsIntersectingXY(a.x, a.y, b.x, b.y, e.source.x, e.source.y, e.target.x, e.target.y)) {
-				trace('a ${a.name}[${a.id}] b ${b.name}[${b.id}] intersects e ${e.source.name}[${e.source.id}] -> ${e.target.name}[${e.target.id}]');
+				//trace('a ${a.name}[${a.id}] b ${b.name}[${b.id}] intersects e ${e.source.name}[${e.source.id}] -> ${e.target.name}[${e.target.id}]');
 				return false;
 			}
 		}

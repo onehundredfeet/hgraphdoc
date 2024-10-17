@@ -408,6 +408,7 @@ enum EMetaValue {
 	MVInt(int:Int);
 	MVFloat(float:Float);
 	MVBool(bool:Bool);
+	MVDynamic(value:Dynamic);
 	MVStrRewrite(regex:EReg, sub:String);
 	MVFn(fn:(MetaElement, MatchVector, Dynamic) -> Dynamic);
 }
@@ -422,6 +423,7 @@ function generateValue(element:MetaElement, matched:MatchVector, generator:EMeta
 		case MVBool(b): b;
 		case MVFn(f): f(element, matched, context.user);
 		case MVCopy: value;
+		case MVDynamic(v): v;
 		case MVStrEmpty: "";
 		case MVStrRewrite(r, sub): value is String ? r.replace(cast(value, String), sub) : null;
 	}
@@ -484,8 +486,19 @@ class MetaElement {
 	public function generateProperties(element:Element, match:MatchVector, context:MetaContext) {
 		if (properties != null) {
 			for (prop in properties.keyValueIterator()) {
-				if (prop.value != null && prop.value != EMetaValue.MVClear) {
-					element.properties.set(prop.key, generateValue(this, match, prop.value, null, context));
+				if (prop.key == "") {
+					for (m in match){
+						for (mp in m.element.properties.keyValueIterator()) {
+							element.properties.set(mp.key, generateValue(this, match, prop.value, mp.value, context));
+						}
+					}
+				}
+				else if (prop.value != null) {
+					if (prop.value == EMetaValue.MVClear) {
+						element.properties.remove(prop.key);
+					} else {
+						element.properties.set(prop.key, generateValue(this, match, prop.value, null, context));
+					}
 				}
 			}
 		}
