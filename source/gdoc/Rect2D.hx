@@ -92,6 +92,19 @@ class Rect2D {
         }
     }
 
+    public function scale( scale:Float ):Void {
+        var dx = this.width;
+        var dy = this.height;
+
+        var cx = (this.xmin + this.xmax) / 2;
+        var cy = (this.ymin + this.ymax) / 2;
+
+        this.xmin = cx - dx * scale / 2;
+        this.ymin = cy - dy * scale / 2;
+        this.xmax = cx + dx * scale / 2;
+        this.ymax = cy + dy * scale / 2;
+    }
+
     public static function infiniteEmpty() : Rect2D {
         return new Rect2D( Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY );
     }

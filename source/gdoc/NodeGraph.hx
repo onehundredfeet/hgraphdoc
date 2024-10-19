@@ -265,21 +265,35 @@ class Node extends Element {
 	}
 }
 
+
 class NodeGraph {
 	var _nextNodeId = 0;
 	var _nextEdgeId = 0;
 
-	public function new() {}
+	var _nodeAllocator:(id:Int)->Node;
+	var _edgeAllocator:(id:Int)->Edge;
+
+	public function new(nodeAllocator:(id:Int)->Node = null, edgeAllocator:(id:Int)->Edge = null) {
+		_nodeAllocator = nodeAllocator != null ? nodeAllocator : newNode;
+		_edgeAllocator = edgeAllocator != null ? edgeAllocator : newEdge;
+	}
+
+	function newNode(id:Int) {
+		return @:privateAccess new Node(id);
+	}
+	function newEdge(id:Int) {
+		return @:privateAccess new Edge(id);
+	}
 
 	public function addNode(name:String = null) {
-		var n = @:privateAccess new Node(_nextNodeId++);
+		var n = _nodeAllocator(_nextNodeId++);
 		_nodes.push(n);
 		n.name = name;
 		return n;
 	}
 
 	public function connectNodes(source:Node, target:Node, relation:String = null) {
-		var arc = @:privateAccess new Edge(_nextEdgeId++);
+		var arc = _edgeAllocator(_nextEdgeId++);
 		_edges.push(arc);
 		arc.source = source;
 		arc.target = target;
@@ -513,7 +527,7 @@ class NodeGraph {
 		}
 	}
 	public function clone(cloneFn:(src:Element, tgt:Element) -> Void = null):NodeGraph {
-		var g = new NodeGraph();
+		var g = new NodeGraph(_nodeAllocator, _edgeAllocator);
 		g.copyContentsFrom(this, cloneFn);
 		return g;
 	}
@@ -533,8 +547,7 @@ class NodeGraph {
 		return getEdgeFromID(id);
 	}
 
-	public static function fromTriangeCenters(triangles:Array<Triangle2D>, bidirectional = false, triangleAttribute:String = null):NodeGraph {
-		var graph = new NodeGraph();
+	public function addTriangeCenters(triangles:Array<Triangle2D>, bidirectional = false, triangleAttribute:String = null) {
 		var triToInt = new Map<Triangle2D, Int>();
 		var pointToID = new Map<Point2D, Int>();
 		var points = new Array<Point2D>();
@@ -566,11 +579,11 @@ class NodeGraph {
 				if (edge.b == null) {
 					edge.b = t;
 					var otherTri = edge.a;
-					var node = graph.nodes[triToInt.get(t)];
-					var otherNode = graph.nodes[triToInt.get(otherTri)];
-					graph.connectNodes(node, otherNode, "connected");
+					var node = nodes[triToInt.get(t)];
+					var otherNode = nodes[triToInt.get(otherTri)];
+					connectNodes(node, otherNode, "connected");
 					if (bidirectional) {
-						graph.connectNodes(otherNode, node, "connected");
+						connectNodes(otherNode, node, "connected");
 					}
 				} else {
 					throw 'Non-manifold geometry';
@@ -587,7 +600,7 @@ class NodeGraph {
 
 			triToInt.set(t, i);
 
-			var n = graph.addNode();
+			var n = addNode();
 			n.x = center.x;
 			n.y = center.y;
 
@@ -607,8 +620,6 @@ class NodeGraph {
 			traceEdge(t.b, t.c, t);
 			traceEdge(t.c, t.a, t);
 		}
-
-		return graph;
 	}
 
 	public function closestMatchByConnections(start:Node, fn:(Node) -> Bool, bidirectional:Bool = true):{node:Node, length:Int} {
