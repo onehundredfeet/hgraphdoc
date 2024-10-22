@@ -30,15 +30,30 @@ class Rect2D {
         this.ymax = ymax;
     }
 
+    public function getCenter() : Point2D {
+        return new Point2D((this.xmin + this.xmax) * 0.5, (this.ymin + this.ymax) * 0.5);
+    }
+
+    public function getMin() : Point2D {
+        return new Point2D(this.xmin, this.ymin);
+    }
+    public function getMax() : Point2D {
+        return new Point2D(this.xmax, this.ymax);
+    }
+    public function getDiagonalLength() : Float {
+        var w = this.width;
+        var h = this.height;
+        return Math.sqrt(w * w + h * h);
+    }
     // Compute the bounding box of the polygon
     public static function fromPoints(points:Array<Point2D>):Rect2D {
         if (points.length == 0) {
             return new Rect2D(0, 0, 0, 0);
         }
-        var minX = points[0].x;
-        var maxX = points[0].x;
-        var minY = points[0].y;
-        var maxY = points[0].y;
+        var minX = Math.POSITIVE_INFINITY;
+        var maxX = Math.NEGATIVE_INFINITY;
+        var minY = Math.POSITIVE_INFINITY;
+        var maxY = Math.NEGATIVE_INFINITY;
         for (v in points) {
             if (v.x < minX) minX = v.x;
             if (v.x > maxX) maxX = v.x;
@@ -107,5 +122,14 @@ class Rect2D {
 
     public static function infiniteEmpty() : Rect2D {
         return new Rect2D( Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY );
+    }
+
+    public function toPolygon() : Polygon2D {
+        return [
+            new Point2D(this.xmin, this.ymin),
+            new Point2D(this.xmax, this.ymin),
+            new Point2D(this.xmax, this.ymax),
+            new Point2D(this.xmin, this.ymax)
+        ];
     }
 }

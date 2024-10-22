@@ -157,7 +157,7 @@ class FaceMesh3D{
         }
         return map;
     }
-    public function isPointInside(point:Point3D):Bool {
+    public function isPointInsideConvex(point:Point3D):Bool {
         for (face in faces) {
             if (face.vertices[0] == point || face.vertices[1] == point || face.vertices[2] == point) {
                //trace('Point is on face...');

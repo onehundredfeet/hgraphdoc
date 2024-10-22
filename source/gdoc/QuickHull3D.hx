@@ -74,7 +74,7 @@ class QuickHull3D {
 		var remainingPoints = [];
 
 		for (point in hull.vertices) {
-			if (!hull.isPointInside(point)) {
+			if (!hull.isPointInsideConvex(point)) {
                 if (hullPoints.exists(point)) {
                     throw 'Point ${point} is already in the hull, but outside hull ${hull.faces}?';
                 }
@@ -120,6 +120,9 @@ class QuickHull3D {
 		}
 	}
 
+	public function containsPoint(p : Point3D) : Bool {
+		return hull.isPointInsideConvex(p);
+	}
 	private function findInitialTetrahedron() {
 		var points = hull.vertices;
         var vertices:Array<Point3D> ;

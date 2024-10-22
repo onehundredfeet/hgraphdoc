@@ -1,4 +1,5 @@
 package gdoc;
+import gdoc.Point3D.computeCentroid;
 import seedyrng.Random;
 
 @:forward
@@ -269,4 +270,13 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 
         return 0.5 * Math.abs(sum);
     }
+
+	public function scale(s : Float) {
+		var center = Point2D.computeCentroid2D(this);
+
+		for (p in this) {
+			p.x = center.x + s * (p.x - center.x);
+			p.y = center.y + s * (p.y - center.y);
+		}
+	}
 }
