@@ -6,6 +6,7 @@ import gdoc.Point2D;
 import gdoc.WeightedPoint2D;
 import gdoc.Line2D;
 import gdoc.Clipping2D;
+import seedyrng.Random;
 
 @:forward
 @:forward.new
@@ -73,9 +74,22 @@ class PowerDiagram {
 		});
 	}
 
-	public static function computeCells(originalPoints:Array<WeightedPoint2D>, min:Point2D, max:Point2D):Map<Int, PowerCell> {
+	public static function computeCells(originalPoints:Array<WeightedPoint2D>, min:Point2D, max:Point2D, random: Random):Map<Int, PowerCell> {
+		// Validate the input
+		var uniquePoints = new Map<String, WeightedPoint2D>();
+		for (p in originalPoints) {
+			var key = p.x + ',' + p.y;
+			if (uniquePoints.exists(key)) {
+				throw 'Duplicate point detected: ${p}';
+			}
+			uniquePoints.set(key, p);
+
+			if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y) {
+				throw 'Point ${p} is outside the bounding box.';
+			}
+		}
+
 		var bb = getBoundingBox(min, max);
-		var random = new seedyrng.Random(Int64.make(8743112, 9182834));
 
 		var points = originalPoints.concat(createBoundaryPoints(min, max));
 
@@ -83,9 +97,9 @@ class PowerDiagram {
 			throw 'At least four points are required to compute a Power Diagram.';
 		}
 
-        var range = max.x - min.x;
+        var range = Math.max(max.x - min.x,  max.y - min.y);
 
-        static final INSIGNIFICANT_PERTURBATION =  1e-6;
+        static final INSIGNIFICANT_PERTURBATION =  1e-5;
 
 		inline function liftAndPerturb(p:WeightedPoint2D, i:Int):Point3D {
 			var lifted = p.lift();
@@ -94,8 +108,8 @@ class PowerDiagram {
 		}
 
 		var liftedPoints = [for (i in 0...points.length) liftAndPerturb(points[i], i)];
-
 		var quickHull = new QuickHull3D(liftedPoints);
+		
 		var faces = quickHull.faces.copy().filter((x) -> x.normal.z < 0);
 		var faceIndices = quickHull.asTriangleIndices(faces); // Flat array, 3 per triangle
 
@@ -108,7 +122,7 @@ class PowerDiagram {
 
 		// Deduplication map with precision control
 		var cellVerts = new Map<String, Point2D>();
-		final precision = 1e-6; // Adjust precision as needed
+		final precision = 1e-5; // Adjust precision as needed
 
 		// Get convex hull point indices
 		var convexHullIndices = quickHull.getUsedVerticesByIndex();
@@ -147,8 +161,16 @@ class PowerDiagram {
 						cell.push(p);
 					}
 				}
+			} else {
+				throw 'Invalid dual point detected for face ${i}.';
 			}
 		}
+		
+		// for (pair in cells.keyValueIterator()) {
+		// 	if (pair.value.length == 0) {
+		// 		throw('Cell for pointIndex ${pair.key}/${originalPoints.length} : [${points[pair.key]}] -> ${liftedPoints[pair.key]} is empty.');
+		// 	}
+		// }
 
 		// Identify indices of boundary points
 		var boundaryStartIndex = originalPoints.length;
@@ -179,19 +201,34 @@ class PowerDiagram {
 			// Sort unique vertices by angle around the origin
 			sortInPlace(uniqueCell, new Point2D(origin.x, origin.y));
 
-			var isUnbounded = convexHull.exists(pointIndex);
+			if (!convexHull.exists(pointIndex)) {
+				throw 'Point not in convex hull: ${pointIndex} -> ${points[pointIndex]}';
+			}
+			
+			if (uniqueCell.length < 3) {
+				throw 'Invalid unique cell detected for index ${pointIndex} / ${points.length} : ${uniqueCell} from ${cell}.';
+			}
+			// Perform polygon clipping to the bounding box
+			var clippedCell = Clipping2D.clipPolygon(uniqueCell, bb);
 
-			if (isUnbounded) {
-				// Perform polygon clipping to the bounding box
-				uniqueCell = Clipping2D.clipPolygon(uniqueCell, bb);
-				sortInPlace(uniqueCell, new Point2D(origin.x, origin.y));
-				cells.set(pointIndex, uniqueCell);
-			} 
+			if (clippedCell.length < 3) {
+				// Invalid cell detected
+				throw 'clipped cell ${clippedCell} vs ${uniqueCell} with min ${min} max ${max} against ${bb}.';
+			}
+			sortInPlace(clippedCell, new Point2D(origin.x, origin.y));
+			cells.set(pointIndex, clippedCell);
 		}
 
 		// Remove boundary points from cells
 		for (i in boundaryStartIndex...liftedPoints.length) {
 			cells.remove(i);
+		}
+
+		// Verify the cells are valid
+		for (pair in cells.keyValueIterator()) {
+			if (pair.value.length < 3) {
+				throw 'Invalid cell detected for index ${pair.key} / ${points.length}.';
+			}
 		}
 		return cells;
 	}

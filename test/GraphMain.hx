@@ -140,10 +140,10 @@ class GraphMain {
 
 			var out = GraphRewriter.applyBest(rewriteGraph, rules, [(_) -> return Seedy.random() * 10]);
 
-			if (out != null) {
+			if (out != false) {
 				trace('Resulting Graph');
 
-				trace(NodeGraphPrinter.graphToString(out));
+				trace(NodeGraphPrinter.graphToString(rewriteGraph));
 			} else {
 				trace("No rewrite found");
 			}
@@ -248,15 +248,19 @@ class GraphMain {
 		}
 	}
 
+	static var random = new Random(Int64.make(123456789, 987654321));
+
 	public static function powerTestEquilateralTriangle():Void {
 		var testName = "Equilateral Triangle with Equal Weights";
+
+		
 		try {
 			var points2D = [
 				WeightedPoint2D.fromPoint2D(new Point2D(0, 0), 1),
 				WeightedPoint2D.fromPoint2D(new Point2D(1, 0), 1),
 				WeightedPoint2D.fromPoint2D(new Point2D(0.5, Math.sqrt(3) / 2), 1)
 			];
-			var cells = PowerDiagram.computeCells(points2D, new Point2D(-0.5, -0.5), new Point2D(1.5, 1.5));
+			var cells = PowerDiagram.computeCells(points2D, new Point2D(-0.5, -0.5), new Point2D(1.5, 1.5), random);
 			// Expected: Each cell should correspond to one point
 			var expectedCells = 3;
 			var keys = [for (k in cells.keys()) k];
@@ -287,7 +291,7 @@ class GraphMain {
 				WeightedPoint2D.fromPoint2D(new Point2D(1, 1), 1),
 				WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), 1)
 			];
-			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0), random);
 			var expectedCells = 4;
 			var actualCells = [for (k in cells.keys()) k];
 			var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
@@ -320,7 +324,7 @@ class GraphMain {
 				WeightedPoint2D.fromPoint2D(new Point2D(1, 1), random.random() * 3.0 + 0.5),
 				WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), random.random() * 3.0 + 0.5)
 			];
-			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0), random);
 			var expectedCells = 4;
 			var actualCells = [for (k in cells.keys()) k];
 			var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
@@ -353,7 +357,7 @@ class GraphMain {
 				WeightedPoint2D.fromPoint2D(new Point2D(1, 1), 1),
 				WeightedPoint2D.fromPoint2D(new Point2D(-1, 1), 1)
 			];
-			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0));
+			var cells = PowerDiagram.computeCells(points2D, new Point2D(-2.0, -2.0), new Point2D(2.0, 2.0), random);
 			var expectedCells = points2D.length;
 			var actualCells = [for (k in cells.keys()) k];
 			var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
@@ -388,7 +392,7 @@ class GraphMain {
 				points2D.push(new WeightedPoint2D(rand.random() * 10 - 5, rand.random() * 10 - 5, 1));
 			}
 
-			var cells = PowerDiagram.computeCells(points2D, new Point2D(-10.0, -10.0), new Point2D(10.0, 10.0));
+			var cells = PowerDiagram.computeCells(points2D, new Point2D(-10.0, -10.0), new Point2D(10.0, 10.0), random);
 			var expectedCells = points2D.length;
 			var actualCells = [for (k in cells.keys()) k];
 			var pass1 = Assert.assertEquals(expectedCells, actualCells.length, "Number of cells should be " + expectedCells);
