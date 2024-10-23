@@ -132,4 +132,22 @@ class Rect2D {
             new Point2D(this.xmin, this.ymax)
         ];
     }
+
+    public function uniformRandomPoints(numPoints : Int, random:Random = null):Array<Point2D> {
+        if (random == null) {
+            random = new Random();
+        }
+
+        var width = this.width;
+        var height = this.height;
+        // Initialize points randomly within the bounding box
+        var points = new Array<Point2D>();
+        for (i in 0...numPoints) {
+            var x = random.random() * width + xmin;
+            var y = random.random() * height + ymin;
+            points.push(new Point2D(x, y));
+        }
+
+        return points;
+    }
 }
