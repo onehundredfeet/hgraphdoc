@@ -6,7 +6,6 @@ import gdoc.Point2D;
 import gdoc.WeightedPoint2D;
 import gdoc.Line2D;
 import gdoc.Clipping2D;
-import seedyrng.Random;
 
 @:forward
 @:forward.new
@@ -190,6 +189,7 @@ class PowerDiagram {
 			cells.remove(i);
 		}
 
+		var removeList = [];
 		for (pair in cells.keyValueIterator()) {
 			var pointIndex = pair.key;
 			var cell = pair.value;
@@ -201,22 +201,25 @@ class PowerDiagram {
 			// Sort unique vertices by angle around the origin
 			sortInPlace(uniqueCell, new Point2D(origin.x, origin.y));
 
-			if (!convexHull.exists(pointIndex)) {
-				throw 'Point not in convex hull: ${pointIndex} -> ${points[pointIndex]}';
-			}
+			// if (!convexHull.exists(pointIndex)) {
+			// 	throw 'Point not in convex hull: ${pointIndex} -> ${points[pointIndex]}';
+			// }
 			
 			if (uniqueCell.length < 3) {
-				throw 'Invalid unique cell detected for index ${pointIndex} / ${points.length} : ${uniqueCell} from ${cell}.';
+//				throw 'Invalid unique cell detected for index ${pointIndex} / ${points.length} : ${uniqueCell} from ${cell}.';
+				cells.set(pointIndex, null);
 			}
-			// Perform polygon clipping to the bounding box
-			var clippedCell = Clipping2D.clipPolygon(uniqueCell, bb);
+			else {
+				// Perform polygon clipping to the bounding box
+				var clippedCell = Clipping2D.clipPolygon(uniqueCell, bb);
 
-			if (clippedCell.length < 3) {
-				// Invalid cell detected
-				throw 'clipped cell ${clippedCell} vs ${uniqueCell} with min ${min} max ${max} against ${bb}.';
+				if (clippedCell.length < 3) {
+					// Invalid cell detected
+					throw 'clipped cell ${clippedCell} vs ${uniqueCell} with min ${min} max ${max} against ${bb}.';
+				}
+				sortInPlace(clippedCell, new Point2D(origin.x, origin.y));
+				cells.set(pointIndex, clippedCell);
 			}
-			sortInPlace(clippedCell, new Point2D(origin.x, origin.y));
-			cells.set(pointIndex, clippedCell);
 		}
 
 		// Remove boundary points from cells
@@ -225,11 +228,11 @@ class PowerDiagram {
 		}
 
 		// Verify the cells are valid
-		for (pair in cells.keyValueIterator()) {
-			if (pair.value.length < 3) {
-				throw 'Invalid cell detected for index ${pair.key} / ${points.length}.';
-			}
-		}
+		// for (pair in cells.keyValueIterator()) {
+		// 	if (pair.value.length < 3) {
+		// 		throw 'Invalid cell detected for index ${pair.key} / ${points.length}.';
+		// 	}
+		// }
 		return cells;
 	}
 
