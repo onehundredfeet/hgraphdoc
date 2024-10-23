@@ -5,7 +5,7 @@ import gdoc.Polygon2D;
 import haxe.Int64;
 import gdoc.FaceMesh3D.FaceMesh3DFace;
 import seedyrng.Seedy;
-import seedyrng.Random;
+import gdoc.Random;
 import gdoc.SVGGenerate;
 import gdoc.NodeGraph;
 import gdoc.NodeGraphReader;
@@ -315,7 +315,7 @@ class GraphMain {
 	}
 
 	public static function testSquareRandomWeights():Void {
-		var random = new seedyrng.Random(Int64.make(123456789, 987654321));
+		var random = new Random(Int64.make(123456789, 987654321));
 		var testName = "Square with Random Weights";
 		try {
 			var points2D = [
@@ -1017,7 +1017,7 @@ class GraphMain {
 	static function dttestRandomPointCloud():Void {
 		trace("Running DelaunayTriangulator testRandomPointCloud...");
 		var points = new Array<Point2D>();
-		var random = new seedyrng.Random();
+		var random = new Random();
 		var numPoints = 100;
 		for (i in 0...numPoints) {
 			var x = random.random() * 100;
