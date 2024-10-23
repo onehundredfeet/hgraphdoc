@@ -915,27 +915,27 @@ class GraphRewriter {
 		var topOperation:Operation = null;
 		var topVariation:MatchVector = null;
 
-		trace('Finding best variation');
+		//trace('Finding best variation');
 		for (r in rules) {
 			var ruleVariations = r.findAllVariations(graph);
 			if (ruleVariations != null) {
-				trace('ruleVariations: $ruleVariations');
+				//trace('ruleVariations: $ruleVariations');
 				for (v in ruleVariations) {
-					trace('Cloning graph');
+					//trace('Cloning graph');
 					var newGraph = graph.clone();
 					context.graph = newGraph;
 
-					trace('remapping graph');
+					//trace('remapping graph');
 					var v1 = v.map((e) -> return e.remap(newGraph));
 
-					trace('Applying  ${r.operation} with variation ${v1}');
+					//trace('Applying  ${r.operation} with variation ${v1}');
 					if (r.apply(v1, context)) {
 
-						trace('Scoring...');
+						//trace('Scoring...');
 						var accum = 0.0;
 						var valid = true;
 						for (f in fitness) {
-							trace('Scoring with ${f}');
+							//trace('Scoring with ${f}');
 							var x = f(newGraph);
 							if (x == null) {
 								valid = false;
@@ -943,22 +943,22 @@ class GraphRewriter {
 							}
 							accum += x;
 						}
-						trace('Score is ${accum} vs ${topScore}');
+						//trace('Score is ${accum} vs ${topScore}');
 						if (valid && accum > topScore) {
 							topScore = accum;
 							topOperation = r.operation;
 							topVariation = v;
 						}
 					} else {
-						trace('Operation failed');
+						//trace('Operation failed');
 					}
 				}
 			} else {
-				trace('No variations for rule ${r}');
+				//trace('No variations for rule ${r}');
 			}
 		}
 
-		trace('Applying best variation');
+		//trace('Applying best variation');
 		if (topOperation != null) {
 			context.graph = graph;
 			//trace('TOP OPERATION ${topOperation} with variation ${topVariation}');
