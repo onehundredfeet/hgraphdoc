@@ -23,8 +23,8 @@ class TriangleFilter {
     
     private static function trianglesOverlapPolygon(tri: Triangle2D, polygon: Polygon2D): Bool {
         // Check if any edge of the triangle intersects any edge of the polygon
-        var triEdges = tri.getEdges();
-        var polyEdges = polygon.getAsEdges();
+        var triEdges = tri.getEdgesUndirected();
+        var polyEdges = polygon.getAsEdgesUndirected();
         
         for (triEdge in triEdges) {
             for (polyEdge in polyEdges) {

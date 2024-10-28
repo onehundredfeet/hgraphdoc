@@ -27,7 +27,7 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		return sum > 0;
 	}
 
-	public function getAsEdges():Array<Edge2D> {
+	public function getAsEdgesUndirected():Array<Edge2D> {
 		var edges = new Array<Edge2D>();
 		var len = this.length;
 		if (len < 2)
@@ -35,7 +35,20 @@ abstract Polygon2D(Array<Point2D>) from Array<Point2D> to Array<Point2D> {
 		for (i in 0...len) {
 			var a = this[i];
 			var b = this[(i + 1) % len]; // Wrap around to the first point
-			edges.push(new Edge2D(a, b));
+			edges.push(Edge2D.fromPointsUndirected(a, b));
+		}
+		return edges;
+	}
+
+	public function getAsEdgesDirected():Array<Edge2D> {
+		var edges = new Array<Edge2D>();
+		var len = this.length;
+		if (len < 2)
+			return edges;
+		for (i in 0...len) {
+			var a = this[i];
+			var b = this[(i + 1) % len]; // Wrap around to the first point
+			edges.push(Edge2D.fromPointsDirected(a, b));
 		}
 		return edges;
 	}

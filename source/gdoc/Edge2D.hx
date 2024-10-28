@@ -5,7 +5,29 @@ class Edge2D {
     public var a:Point2D;
     public var b:Point2D;
 
-    public function new(a:Point2D, b:Point2D) {
+    public inline function new() {
+        
+    }
+
+    public inline function clone():Edge2D {
+        var edge = new Edge2D();
+        edge.a = a;
+        edge.b = b;
+        return edge;
+    }
+
+    public inline function setFromPointsDirected(a:Point2D, b:Point2D) {
+        this.a = a;
+        this.b = b;
+    }
+    public static function fromPointsDirected(a:Point2D, b:Point2D) {
+        var edge = new Edge2D();
+        edge.a = a;
+        edge.b = b;
+        return edge;
+    }
+
+    public inline function setFromPointsUndirected(a:Point2D, b:Point2D) {
         // Ensure consistent ordering for comparison
         if (a.x < b.x || (a.x == b.x && a.y < b.y)) {
             this.a = a;
@@ -14,6 +36,11 @@ class Edge2D {
             this.a = b;
             this.b = a;
         }
+    }
+    public static function fromPointsUndirected(a:Point2D, b:Point2D) {
+        var edge = new Edge2D();
+        edge.setFromPointsUndirected(a, b);
+        return edge;
     }
 
     // Equality check based on points

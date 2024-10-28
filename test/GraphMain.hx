@@ -1,5 +1,7 @@
 package test;
 
+import gdoc.Rect2D;
+import gdoc.Poisson2D;
 import gdoc.PointField2D;
 import gdoc.Polygon2D;
 import haxe.Int64;
@@ -918,9 +920,10 @@ class GraphMain {
 		var points = [new Point2D(0, 0), new Point2D(1, 0), new Point2D(0, 1)];
 
 		var triangles = DelaunayTriangulator.triangulate(points);
-
-		// Expecting one triangle
 		Assert.assertEquals(1, triangles.length, "Simple Triangle: Incorrect number of triangles");
+
+		var trianglesFast = DelaunayTriangulator.triangulateFast(points);
+		// Expecting one triangle
 
 		var tri = triangles[0];
 		Assert.assertTrue((tri.a.eqval(points[0]) && tri.b.eqval(points[1]) && tri.c.eqval(points[2]))
@@ -928,6 +931,7 @@ class GraphMain {
 			|| (tri.a.eqval(points[2]) && tri.b.eqval(points[0]) && tri.c.eqval(points[1])),
 			"Simple Triangle: Triangle vertices do not match input points");
 
+		Assert.assertEquals(trianglesFast.length, 1, "Simple Triangle: Incorrect number of triangles (fast)");
 		// Verify circumcircle does not contain any other points (none in this case)
 	}
 
@@ -942,6 +946,11 @@ class GraphMain {
 
 		// Expecting two triangles
 		Assert.assertEquals(2, triangles.length, "Convex Square: Incorrect number of triangles");
+
+		var trianglesFast = DelaunayTriangulator.triangulateFast(points);
+		// Expecting one triangle
+
+		trace('Fast Delaunay Triangulation (Square): ' + trianglesFast);
 
 		// Verify that each triangle's circumcircle does not contain any other points
 		for (tri in triangles) {
@@ -1345,7 +1354,7 @@ class GraphMain {
 		// Test with a square
 		var square : Polygon2D = [new Point2D(-20, -20), new Point2D(20, -20), new Point2D(10, 10), new Point2D(0, 10)];
 		var minDistance = 2.0;
-		var interiorPoints = square.generateInteriorPoints( minDistance);
+		var interiorPoints = Poisson2D.pointsOnPolygon(square, minDistance);
 
         SVGGenerate.writePointField("pf_square_interior.svg", interiorPoints );
 
@@ -1384,7 +1393,7 @@ class GraphMain {
 		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
 		var spacing = 2.0;
         var edgePoints = square.generateEdgePoints( spacing );
-        var interiorPoints = square.generateInteriorPoints( spacing, 0.0, edgePoints);
+        var interiorPoints = Poisson2D.pointsOnPolygon(square, spacing, 0.0, edgePoints);
 		var pointField = edgePoints.concat(interiorPoints);
 
         SVGGenerate.writePointField("pf_square.svg", pointField );

@@ -11,9 +11,14 @@ class Triangle2D {
 		this.c = c;
 	}
 
-	public function getEdges():Array<Edge2D> {
-		return [new Edge2D(a, b), new Edge2D(b, c), new Edge2D(c, a)];
+	public function getEdgesUndirected():Array<Edge2D> {
+		return [ Edge2D.fromPointsUndirected(a, b), Edge2D.fromPointsUndirected(b, c), Edge2D.fromPointsUndirected(c, a)];
 	}
+
+    public function getEdgesDirected():Array<Edge2D> {
+		return [ Edge2D.fromPointsDirected(a, b), Edge2D.fromPointsDirected(b, c), Edge2D.fromPointsDirected(c, a)];
+	}
+
 
 	// public inline function containsPoint(point:Point2D):Bool {
 	// 	return triangleContainsPoint(point, a, b, c);
@@ -108,7 +113,7 @@ class Triangle2D {
 		return c;
 	}
 
-	public function findSharedEdge(other:Triangle2D):Edge2D {
+	public function findSharedEdgeUndirected(other:Triangle2D):Edge2D {
 		var sharedPoints = [];
 		if (this.a == other.a || this.a == other.b || this.a == other.c)
 			sharedPoints.push(this.a);
@@ -117,7 +122,20 @@ class Triangle2D {
 		if (this.c == other.a || this.c == other.b || this.c == other.c)
 			sharedPoints.push(this.c);
 		if (sharedPoints.length == 2)
-			return new Edge2D(sharedPoints[0], sharedPoints[1]);
+			return Edge2D.fromPointsUndirected(sharedPoints[0], sharedPoints[1]);
+		return null;
+	}
+
+    public function findSharedEdgeDirected(other:Triangle2D):Edge2D {
+		var sharedPoints = [];
+		if (this.a == other.a || this.a == other.b || this.a == other.c)
+			sharedPoints.push(this.a);
+		if (this.b == other.a || this.b == other.b || this.b == other.c)
+			sharedPoints.push(this.b);
+		if (this.c == other.a || this.c == other.b || this.c == other.c)
+			sharedPoints.push(this.c);
+		if (sharedPoints.length == 2)
+			return Edge2D.fromPointsDirected(sharedPoints[0], sharedPoints[1]);
 		return null;
 	}
 
