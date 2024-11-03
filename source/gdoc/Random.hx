@@ -15,10 +15,13 @@ abstract Random(seedyrng.Random) {
     public inline function choice<T>(array:Array<T>) {
         return this.choice(array);
     }
+    public inline function random2Pi() : Float {
+        return this.random() * (Math.PI * 2.);
+    }
 }
 #else
 class Random {
-    public function new(seed : haxe.Int64 = 0) {
+    public inline function new(seed : haxe.Int64 = 0) {
 
     }
     public inline function random() {
@@ -38,6 +41,9 @@ class Random {
     }
     public inline function choice<T>(array:Array<T>) {
         return array[this.randomInt(0, array.length - 1)];
+    }
+    public inline function random2Pi() : Float {
+        return this.random() * (Math.PI * 2.);
     }
 }
 #end
