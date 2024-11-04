@@ -24,6 +24,8 @@ import gdoc.EarClipping;
 import gdoc.Triangle2D;
 import gdoc.DelaunayTriangulator;
 import gdoc.TriangleFilter;
+import gdoc.Relax;
+import gdoc.SVGWriter;
 
 using Lambda;
 
@@ -235,6 +237,8 @@ class GraphMain {
         pftestGenerateInteriorPoints();
         pftestGeneratePointField();
         pftestMerge();
+
+		relaxTriFunadmental();
 	}
 
 	static var passedTests = 0;
@@ -1470,5 +1474,44 @@ class GraphMain {
         Assert.assertEquals(8, merged.indices.length, "Merged square should have 8 indices");
 
 		trace("generatePointField test passed for square.\n");
+	}
+
+	public static function writeTriangulation(name : String, triangulation : Array<Triangle2D>) {
+		var writer = new SVGWriter();
+		var bounds = Rect2D.fromTriangles(triangulation);
+
+		writer.bound(bounds, true);
+
+		var attr = new SVGPrimAttributes();
+
+		for (t in triangulation) {
+			writer.polygon([t.a, t.b, t.c], attr);
+		}
+
+		writer.finishAndWrite(name);
+	}
+
+
+	public static function relaxTriFunadmental() {
+		trace("Testing relaxTriFunadmental...");
+
+		// equilateral triangle
+		var equilateralTriangle = new Triangle2D(new Point2D(0, 0), new Point2D(1, 0), new Point2D(0.5, Math.sqrt(3) / 2));
+
+		trace('Equilateral triangle: ' + equilateralTriangle);
+		Relax.relaxTriangulation([equilateralTriangle], [0.1], 0.1, 100);
+
+		trace('Relaxed triangle: ' + equilateralTriangle);
+
+		// Jeremy's triangle
+		var jeremyTriangle = new Triangle2D(new Point2D(0, 0), new Point2D(0, 1), new Point2D(1, 2));
+		writeTriangulation('jeremy_start.svg', [jeremyTriangle]);
+
+		trace('Jeremy triangle: ' + jeremyTriangle);
+		Relax.relaxTriangulation([jeremyTriangle], [0.1], 0.1, 100);
+		writeTriangulation('jeremy_end.svg', [jeremyTriangle]);
+
+		trace('Relaxed triangle: ' + jeremyTriangle);
+
 	}
 }

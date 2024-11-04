@@ -82,6 +82,34 @@ class Rect2D {
         return new Rect2D( minX, minY, maxX, maxY );
     }
 
+    public static function fromTriangles( triangles : Array<Triangle2D> ) {
+        if (triangles.length == 0) {
+            return new Rect2D(0, 0, 0, 0);
+        }
+
+        var minX = triangles[0].a.x;
+        var maxX = triangles[0].a.x;
+        var minY = triangles[0].a.y;
+        var maxY = triangles[0].a.y;
+        for (t in triangles) {
+            if (t.a.x < minX) minX = t.a.x;
+            if (t.a.x > maxX) maxX = t.a.x;
+            if (t.a.y < minY) minY = t.a.y;
+            if (t.a.y > maxY) maxY = t.a.y;
+
+            if (t.b.x < minX) minX = t.b.x;
+            if (t.b.x > maxX) maxX = t.b.x;
+            if (t.b.y < minY) minY = t.b.y;
+            if (t.b.y > maxY) maxY = t.b.y;
+
+            if (t.c.x < minX) minX = t.c.x;
+            if (t.c.x > maxX) maxX = t.c.x;
+            if (t.c.y < minY) minY = t.c.y;
+            if (t.c.y > maxY) maxY = t.c.y;
+        }
+
+        return new Rect2D( minX, minY, maxX, maxY );
+    }
     public inline function expandToInclude(p:Point2D):Void {
         if (p.x < this.xmin) this.xmin = p.x;
         if (p.x > this.xmax) this.xmax = p.x;

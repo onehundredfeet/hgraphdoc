@@ -1,6 +1,7 @@
 package gdoc;
 
 import gdoc.NodeGraph;
+import gdoc.TriangleConnectivity2D;
 
 using Lambda;
 
@@ -17,6 +18,7 @@ class RelaxNodeInfo {
 		this.count = 0;
 	}
 }
+
 
 class Relax {
 	// Unrolled version, could collapse to common version
@@ -138,5 +140,107 @@ class Relax {
 		}
 
 		return squaredError;
+	}
+
+	public static function relaxTriangulation( triangles : Array<Triangle2D>, stiffness: Array<Float>, iterationStrength:Float, iterations: Int, connectivity:TriangleConnectivity2D = null) {
+		if (connectivity == null) {
+			connectivity = TriangleConnectivity2D.fromTriangles(triangles);
+		}
+
+		var stiffness1 = stiffness[0];
+		var stiffness2 = stiffness.length >= 2 ? stiffness[1] : 0.0;
+
+		
+		var verts = [for (v in connectivity.vertIt) v];
+		var edges = [for (e in connectivity.edgeIt) e];
+		
+		trace('relaxing ${verts.length} verts and ${edges.length} edges from ${triangles.length} triangles');
+
+		var edgeLengths = [for (e in edges) {
+			var dx = e.b.x - e.a.x;
+			var dy = e.b.y - e.a.y;
+			Math.sqrt(dx * dx + dy * dy);
+		}];
+
+		var avergeEdgeLength = edgeLengths.fold((l, sum) -> sum + l, 0.0) / edgeLengths.length;
+
+		//avergeEdgeLength *= 0.5;
+		var forceAccum = [for (_ in 0...verts.length) new Point2D(0.0, 0.0)];
+
+		
+		function calculateError() {
+			var squaredError = 0.0;
+			for (e in edges) {
+				var a = e.a;
+				var b = e.b;
+
+				var dx = b.x - a.x;
+				var dy = b.y - a.y;
+				var distance = Math.sqrt(dx * dx + dy * dy);
+				var delta = (distance - avergeEdgeLength);
+				squaredError += delta * delta;
+			}
+			return squaredError / edges.length;
+		}
+
+		trace('average length: $avergeEdgeLength with error ${calculateError()}');
+
+		final RELAX_EPISLON = 1e-7;
+		for (i in 0...iterations) {
+			for (e in edges) {
+				var a = e.a;
+				var b = e.b;
+
+				var dx = b.x - a.x;
+				var dy = b.y - a.y;
+				var currentLength = Math.sqrt(dx * dx + dy * dy);
+
+				if (currentLength > 0.0) {
+					// if currentLength is > avergeEdgeLength, then the force is attractive, i.e. move a and b closer together
+					// if currentLength is < avergeEdgeLength, then the force is repulsive
+					var delta = (currentLength - avergeEdgeLength);
+					var sign = delta >= 0.0 ? 1.0 : -1.0;
+					var mag = delta * sign;
+					if (mag < RELAX_EPISLON) {
+						continue;
+					}
+					// + mag * mag * stiffness2
+					var forceStrength = mag * stiffness1 * sign;
+
+					// normalize the vector to get the direction from a to b
+					// if the force is attractive, i.e. positive, then a should move towards b and vice versa
+					dx /= currentLength; 
+					dy /= currentLength;
+
+					// scale the direction by the strength of the force
+					var fdx = dx * forceStrength;
+					var fdy = dy * forceStrength;
+
+					var accuma = forceAccum[connectivity.getPointID(a)];
+					var accumb = forceAccum[connectivity.getPointID(b)];
+
+					// if force strength is positive it will move a and b closer together
+					accuma.x += fdx;
+					accuma.y += fdy;
+					accumb.x -= fdx;
+					accumb.y -= fdy;
+				} 
+			}
+		
+			// average edge length for each face
+			
+			for (j in 0...verts.length) {
+				var v = verts[j];
+				var vid = connectivity.getPointID(v);
+				var acc = forceAccum[vid];
+				v.x += acc.x * iterationStrength;
+				v.y += acc.y * iterationStrength;
+				acc.x = 0.0;
+				acc.y = 0.0;
+			}
+			trace('iteration $i error ${calculateError()}');
+		}
+
+
 	}
 }
