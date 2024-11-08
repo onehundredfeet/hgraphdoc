@@ -81,6 +81,20 @@ class TriangleConnectivity2D {
         edgeC.addFace(t);
     }
 
+    public function getOppositeTriangle( t : Triangle2D, a : Point2D, b : Point2D) : Triangle2D {
+        var edge = _edgeMap.get(getEdgeKeyFromPoints(a, b));
+        if (edge == null) {
+            return null;
+        }
+        if (edge.faceA == t) {
+            return edge.faceB;
+        } else if (edge.faceB == t) {
+            return edge.faceA;
+        } else {
+            throw "TriangleConnectivity2D.getOppositeTriangle: Edge does not belong to triangle";
+        }
+    }
+
     public static function fromTriangles(triangles : Array<Triangle2D>) : TriangleConnectivity2D {
         var connectivity = new TriangleConnectivity2D();
         for (t in triangles) {

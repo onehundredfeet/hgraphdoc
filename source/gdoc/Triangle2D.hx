@@ -1,15 +1,22 @@
 package gdoc;
 
-class Triangle2D {
-	public var a:Point2D;
-	public var b:Point2D;
-	public var c:Point2D;
+class Triangle2D extends Prim2D {
 
 	public function new(a:Point2D, b:Point2D, c:Point2D) {
 		this.a = a;
 		this.b = b;
 		this.c = c;
 	}
+
+    public function area():Float {
+        var y1 = a.y;
+        var y2 = b.y;
+        var y3 = c.y;
+
+        return Math.abs((a.x * (y2 - y3) +
+                         b.x * (y3 - y1) +
+                         c.x * (y1 - y2)) / 2);
+    }
 
 	public function getEdgesUndirected():Array<Edge2D> {
 		return [ Edge2D.fromPointsUndirected(a, b), Edge2D.fromPointsUndirected(b, c), Edge2D.fromPointsUndirected(c, a)];

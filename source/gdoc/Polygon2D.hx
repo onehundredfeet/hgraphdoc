@@ -1,5 +1,5 @@
 package gdoc;
-import gdoc.Point3D.computeCentroid;
+import gdoc.Point3D;
 
 @:forward
 @:forward.new

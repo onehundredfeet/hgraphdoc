@@ -1,3 +1,3 @@
 package gdoc;
 
-typedef SimpleMesh2D = Array<Triangle2D>;
+typedef SimpleTriMesh2D = Array<Triangle2D>;

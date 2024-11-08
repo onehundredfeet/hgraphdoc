@@ -162,7 +162,10 @@ class Relax {
 			Math.sqrt(dx * dx + dy * dy);
 		}];
 
+		var triangleAreas = [for (t in triangles) t.area()];
+
 		var avergeEdgeLength = edgeLengths.fold((l, sum) -> sum + l, 0.0) / edgeLengths.length;
+		var avergeTriangleArea = triangleAreas.fold((a, sum) -> sum + a, 0.0) / triangleAreas.length;
 
 		//avergeEdgeLength *= 0.5;
 		var forceAccum = [for (_ in 0...verts.length) new Point2D(0.0, 0.0)];
@@ -183,7 +186,7 @@ class Relax {
 			return squaredError / edges.length;
 		}
 
-		trace('average length: $avergeEdgeLength with error ${calculateError()}');
+		trace('average length: $avergeEdgeLength with error ${calculateError()} and average area $avergeTriangleArea');
 
 		final RELAX_EPISLON = 1e-7;
 		for (i in 0...iterations) {
@@ -226,6 +229,11 @@ class Relax {
 					accumb.y -= fdy;
 				} 
 			}
+
+			for (j in 0...triangles.length) {
+				triangleAreas[j] = triangles[j].area();
+				var angleDelta = (triangleAreas[j] - avergeTriangleArea);
+			}
 		
 			// average edge length for each face
 			
@@ -238,7 +246,7 @@ class Relax {
 				acc.x = 0.0;
 				acc.y = 0.0;
 			}
-			trace('iteration $i error ${calculateError()}');
+			//trace('iteration $i error ${calculateError()}');
 		}
 
 
