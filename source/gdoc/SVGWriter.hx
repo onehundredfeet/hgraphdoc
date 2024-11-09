@@ -44,8 +44,8 @@ class ImageFrame {
 
         var range_x = bounds.width;
         var range_y = bounds.height;
-        var x_scale = (width - 2 * margin) / (range_x);
-        var y_scale = (height - 2 * margin) / (range_y);
+        var x_scale = (frame.width - 2 * frame.margin) / (range_x);
+        var y_scale = (frame.height - 2 * frame.margin) / (range_y);
         frame.scale = x_scale < y_scale ? x_scale : y_scale;
         frame.bounds = bounds;
 
@@ -80,12 +80,17 @@ class SVGWriter {
         frame = ImageFrame.generateFrameOrDefault(f, bounds);
         @:privateAccess frame.flipY = flipY;
 
+        _buffer = new StringBuf();
+        addHeader();
     }
 
 
     private function addHeader( ) {
+        var width = frame != null ? frame.width : 1000.0;
+        var height = frame != null ? frame.height : 1000.0;
+        
         _buffer.add('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n');
-        _buffer.add('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">\n');
+        _buffer.add('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 ${width} ${height}">\n');
         _buffer.add('<defs>\n');
         _buffer.add('\t<marker\n');
         _buffer.add('\t\tid="arrow"\n');

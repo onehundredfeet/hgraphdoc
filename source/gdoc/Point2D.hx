@@ -24,6 +24,48 @@ class Point2D {
         }
     }
 
+    // breaks if angle is greater than 180 degrees
+    public static function angleBetweenPoints(p:Point2D, a:Point2D, b:Point2D) {
+        var adx = a.x - p.x;
+        var ady = a.y - p.y;
+        var bdx = b.x - p.x;
+        var bdy = b.y - p.y;
+
+        var dot = adx * bdx + ady * bdy;
+
+        var alen = Math.sqrt(adx * adx + ady * ady);
+        var blen = Math.sqrt(bdx * bdx + bdy * bdy);
+
+        var cos = dot / (alen * blen);
+        return Math.acos(cos);
+    }
+
+    public static function angleBetweenCCPoints(a:Point2D, prev:Point2D, next:Point2D) {
+        var adx = a.x - prev.x;
+        var ady = a.y - prev.y;
+        var bdx = a.x - next.x;
+        var bdy = a.y - next.y;
+
+       
+        
+        var dot = adx * bdx + ady * bdy;
+
+        var alen = Math.sqrt(adx * adx + ady * ady);
+        var blen = Math.sqrt(bdx * bdx + bdy * bdy);
+
+        var cos = dot / (alen * blen);
+        var angle = Math.acos(cos);
+
+        var perpX = ady;
+        var perpY = -adx;
+
+        var perpDot = perpX * bdx + perpY * bdy;
+        if (perpDot < 0) {
+            angle = 2 * Math.PI - angle;
+        }
+        return angle;
+    }
+
     public function distanceTo(p:Point2D):Float {
         var dx = this.x - p.x;
         var dy = this.y - p.y;

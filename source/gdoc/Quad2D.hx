@@ -8,12 +8,19 @@ class Quad2D extends Prim2D {
         this.d = d;
 	}
 
-    function calculateArea():Float {    
+    public inline function calculateArea():Float {    
         // Apply the Shoelace Formula
-        var area = Math.abs(
-            (a.x * b.y + b.x * c.y + c.x * d.y + d.x * a.y) -
-            (a.y * b.x + b.y * c.x + c.y * d.x + d.y * a.x)
-        ) / 2;
+        var area = Math.abs(calculateSignedArea());
+    
+        return area;
+    }
+
+    public function calculateSignedArea():Float {    
+        // Apply the Shoelace Formula
+        var area = 
+            ((a.x * b.y + b.x * c.y + c.x * d.y + d.x * a.y) -
+            (a.y * b.x + b.y * c.x + c.y * d.x + d.y * a.x))
+        / 2;
     
         return area;
     }
@@ -44,6 +51,11 @@ class Quad2D extends Prim2D {
         return a.eqval(p) || b.eqval(p) || c.eqval(p) || d.eqval(p);
     }
 
+    public inline function flipQuad() {
+        var tmp = b;
+        b = d;
+        d = tmp;
+    }
 
     public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {        
         if (containsPoint(p1) || containsPoint(p2)) {

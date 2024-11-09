@@ -10,10 +10,10 @@ class Prim2D {
         return this;
     }
 
-    public function getVertCount() : Int {
+    public inline function getVertCount() : Int {
         return d == null ? 3 : 4;
     }
-    
+
     public inline function getPoint(idx:Int) : Point2D {
         return switch(idx) {
             case 0: a;
@@ -24,6 +24,40 @@ class Prim2D {
         }
     }
 
+    public inline function isCCW() {
+        if (d == null) {
+            return Point2D.orientation(a, b, c) > 0;
+        }
+        var areax2 = 
+        (a.x * b.y + b.x * c.y + c.x * d.y + d.x * a.y) -
+        (a.y * b.x + b.y * c.x + c.y * d.x + d.y * a.x);
+        return areax2 > 0;
+        // // Quadrilateral case: Compute the signed area of the entire polygon
+        // var area = 0.0;
+
+        // // Sum the signed area using the shoelace formula (determinant method)
+        // area += a.x * b.y - b.x * a.y; // Edge a -> b
+        // area += b.x * c.y - c.x * b.y; // Edge b -> c
+        // area += c.x * d.y - d.x * c.y; // Edge c -> d
+        // area += d.x * a.y - a.x * d.y; // Edge d -> a
+
+        // // If the area is positive, the polygon is counterclockwise
+        // return area > 0;
+    }
+
+
+
+    public inline function flip() {
+        if (d == null) {
+            var tmp = b;
+            b = c;
+            c = tmp;
+        } else {
+            var tmp = b;
+            b = d;
+            d = tmp;
+        }
+    }
     public function getEdgeIndexFromVerts(oa : Point2D, ob : Point2D) : Int {
         var l = getVertCount();
 
@@ -45,4 +79,35 @@ class Prim2D {
 
         return getEdgeIndexFromVerts(fa, fb);
     }
+    public function getCentroid() : Point2D {
+        var x = 0.0;
+        var y = 0.0;
+        
+        x = a.x + b.x + c.x;
+        y = a.y + b.y + c.y;
+        if (d != null) {
+            x += d.x;
+            y += d.y;
+            return new Point2D(x/4, y/4);
+        }
+        return new Point2D(x/3, y/3);
+    }
+
+    public function getInteriorAngles() : Array<Float> 
+    {
+        if (d == null) {
+            return [
+                Point2D.angleBetweenPoints(a, b, c),
+                Point2D.angleBetweenPoints(b, c, a),
+                Point2D.angleBetweenPoints(c, a, b)
+            ];
+        }
+        return [
+            Point2D.angleBetweenCCPoints(a, d, b),
+            Point2D.angleBetweenCCPoints(b, a, c),
+            Point2D.angleBetweenCCPoints(c, b, d),
+            Point2D.angleBetweenCCPoints(d, c, a)
+        ];
+    }
+    
 }

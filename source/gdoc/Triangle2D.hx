@@ -281,3 +281,20 @@ class Triangle2D extends Prim2D {
         return Math.acos((ca_x * cb_x + ca_y * cb_y) / (len_ca * len_cb));
     }
 }
+
+
+@:forward
+abstract TriangleList2D ( Array<Triangle2D> ) from Array<Triangle2D> to Array<Triangle2D> {
+    public inline function new(tris : Array<Triangle2D>) {
+        this = tris;
+    }
+    public function conformCCW() {
+        for (t in this) {
+            if (!t.isCounterClockwise()) {
+                var temp = t.b;
+                t.b = t.c;
+                t.c = temp;
+            }
+        }
+    }
+}

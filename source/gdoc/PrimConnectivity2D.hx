@@ -1,6 +1,10 @@
 package gdoc;
 
+import haxe.Int64;
 import gdoc.Prim2D;
+
+typedef EdgeKeyInt = haxe.Int64;
+typedef EdgeKeyMapType = hl.types.Int64Map;
 
 class PrimEdge2D extends Edge2D {
     public var faceA:Prim2D;
@@ -47,7 +51,7 @@ class PrimConnectivity2D {
     }
     var _pointToID = new Map<Point2D, Int>();
     var _pointCount = 0;
-    var _edgeMap = new Map<Int, PrimEdge2D>();
+    var _edgeMap = new EdgeKeyMapType();
     var _vertEdges = new Map<Point2D, Array<PrimEdge2D>>();
 
     public var vertIt(get, never):Iterator<Point2D>;
@@ -76,9 +80,9 @@ class PrimConnectivity2D {
 		var aid = getOrAddPoint(a);
 		var bid = getOrAddPoint(b);
 		if (aid < bid) {
-			return (aid << 16) | bid;
+			return Int64.make(aid, bid);
 		} else {
-			return (bid << 16) | aid;
+			return Int64.make(bid, aid);
 		}
 	}
 
@@ -207,6 +211,19 @@ class PrimConnectivity2D {
 
         var quad = new Quad2D(e.a, ta.getOppositePointByRef(e.a, e.b), e.b, tb.getOppositePointByRef(e.a, e.b));
 
+        if (!quad.isCCW()) {
+            quad.flipQuad();
+
+            if (!quad.isCCW()) {
+                trace('area: ${quad.calculateSignedArea()}');
+                trace('a: ${quad.a}');
+                trace('b: ${quad.b}');
+                trace('c: ${quad.c}');
+                trace('d: ${quad.d}');
+
+                throw 'PrimConnectivity2D.disolveEdge: Quad must be counter clockwise ${quad}';
+            }
+        }
         substitutePrim(quad, ta);
         substitutePrim(quad, tb);
 
@@ -217,6 +234,10 @@ class PrimConnectivity2D {
 
         edgeListA.remove(e);
         edgeListB.remove(e);
+    }
+
+    public inline function getEdgesAroundVert(p:Point2D) {
+        return _vertEdges.get(p);
     }
 
     public function gatherFaces() : Array<Prim2D> {
@@ -232,4 +253,49 @@ class PrimConnectivity2D {
         }
         return [for (f in faces.keys()) f];
     }
+
+    public function getSubdivided() : PrimConnectivity2D {
+        var prims = gatherFaces();
+
+        var edges : Array<PrimEdge2D> = [for (e in _edgeMap) e];
+        
+        // edgeVerts
+        var edgeVerts = new Map<PrimEdge2D, Point2D>();
+        for (e in edges) {
+            edgeVerts.set(e, new Point2D((e.a.x + e.b.x) / 2, (e.a.y + e.b.y) / 2));
+        }
+
+        var primCentroids = new Map<Prim2D, Point2D>();
+        for (p in prims) {
+            primCentroids.set(p, p.getCentroid());
+        }
+        var newConnectivity = new PrimConnectivity2D();
+        for (p in prims) {
+            if (p is Triangle2D) {
+                var ab = getEdgeFromPoints(p.a, p.b);
+                var bc = getEdgeFromPoints(p.b, p.c);
+                var ca = getEdgeFromPoints(p.c, p.a);
+
+                // add 3 quads
+                newConnectivity.addPrim(new Quad2D(p.a, edgeVerts.get(ab), primCentroids.get(p), edgeVerts.get(ca)));
+                newConnectivity.addPrim(new Quad2D(p.b, edgeVerts.get(bc), primCentroids.get(p), edgeVerts.get(ab)));
+                newConnectivity.addPrim(new Quad2D(p.c, edgeVerts.get(ca), primCentroids.get(p), edgeVerts.get(bc)));
+            } else if (p is Quad2D) {
+                var q : Quad2D = cast p;
+                // add 4 quads
+                var ab = getEdgeFromPoints(q.a, q.b);
+                var bc = getEdgeFromPoints(q.b, q.c);
+                var cd = getEdgeFromPoints(q.c, q.d);
+                var da = getEdgeFromPoints(q.d, q.a);
+
+                newConnectivity.addPrim(new Quad2D(q.a, edgeVerts.get(ab), primCentroids.get(q), edgeVerts.get(da)));
+                newConnectivity.addPrim(new Quad2D(q.b, edgeVerts.get(bc), primCentroids.get(q), edgeVerts.get(ab)));
+                newConnectivity.addPrim(new Quad2D(q.c, edgeVerts.get(cd), primCentroids.get(q), edgeVerts.get(bc)));
+                newConnectivity.addPrim(new Quad2D(q.d, edgeVerts.get(da), primCentroids.get(q), edgeVerts.get(cd)));
+            }
+        }
+        
+        return newConnectivity;
+    }
+    
 }

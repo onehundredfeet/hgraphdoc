@@ -1,5 +1,6 @@
 package test;
 
+import gdoc.Quad2D;
 import gdoc.PrimConnectivity2D;
 import gdoc.Rect2D;
 import gdoc.Poisson2D;
@@ -209,6 +210,9 @@ class GraphMain {
 		heBasic();
 
 		primDisolve();
+		primSubdivide();
+		primAngles();
+		primRelax();
 	}
 
 	static var passedTests = 0;
@@ -1565,5 +1569,51 @@ class GraphMain {
 		triConnectivity.disolveEdge(edge);
 		var newTris = triConnectivity.gatherFaces();
 		trace('post-dissolve: ' + newTris);
+	}
+
+	public static function primSubdivide() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(0, 1);
+		var d = new Point2D(1, 1);
+		var triA = new Triangle2D(a, b, c);
+		var triB = new Triangle2D(c, b, d);
+		var tris : Array<Prim2D> = [triA, triB];
+		var triConnectivity = PrimConnectivity2D.fromPrims([triA]);
+
+		var prims = triConnectivity.getSubdivided();
+
+		trace('subdivided triangle: ' + prims);
+	}
+
+	public static function primAngles() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(1, 1);
+		var d = new Point2D(0, 1);
+
+		var quad = new Quad2D(a, b, c, d);
+		var angles = quad.getInteriorAngles().map(function(a) return a * 180 / Math.PI);
+		trace('quad angles: ' + angles);
+
+		var e = new Point2D(0.25, 0.25);
+		var quad2 = new Quad2D(a, b, e, d);
+		var angles2 = quad2.getInteriorAngles().map(function(a) return a * 180 / Math.PI);
+		trace('quad2 angles: ' + angles2);
+	}
+
+	public static function primRelax() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(0.25, 0.25);
+		var d = new Point2D(0, 1);
+		var quad2 = new Quad2D(a, b, c, d);
+
+		var prims : Array<Prim2D> = [quad2];
+		var angles = quad2.getInteriorAngles().map(function(a) return a * 180 / Math.PI);
+		trace('relaxed quad2 - before: ' + angles);
+		Relax.relaxPrims(prims, [0.1, 0.5], 0.1, 10);
+		var angles2 = quad2.getInteriorAngles().map(function(a) return a * 180 / Math.PI);
+		trace('relaxed quad2 - after: ' + angles2);
 	}
 }
