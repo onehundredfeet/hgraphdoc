@@ -11,8 +11,9 @@ class Prim2D {
     }
 
     public function getVertCount() : Int {
-        return 3;
+        return d == null ? 3 : 4;
     }
+    
     public inline function getPoint(idx:Int) : Point2D {
         return switch(idx) {
             case 0: a;

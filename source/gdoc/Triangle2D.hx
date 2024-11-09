@@ -263,7 +263,21 @@ class Triangle2D extends Prim2D {
         return false; 
     }
 
-    public function calculateCenter() {
+    public inline function calculateCenter() {
         return new Point2D((a.x + b.x + c.x) / 3, (a.y + b.y + c.y) / 3);
+    }
+
+    public function getAngleOpposite( a : Point2D, b : Point2D) {
+        var c = getOppositePointByRef(a, b);
+
+        var ca_x = a.x - c.x;
+        var ca_y = a.y - c.y;
+        var len_ca = Math.sqrt(ca_x * ca_x + ca_y * ca_y);
+
+        var cb_x = b.x - c.x;
+        var cb_y = b.y - c.y;
+        var len_cb = Math.sqrt(cb_x * cb_x + cb_y * cb_y);
+
+        return Math.acos((ca_x * cb_x + ca_y * cb_y) / (len_ca * len_cb));
     }
 }

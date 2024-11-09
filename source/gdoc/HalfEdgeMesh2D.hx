@@ -9,6 +9,10 @@ class HalfEdgeVertex2D extends Point2D{
         this.edge = null;
         this.index = index;
     }
+
+    public override function toString() : String {
+        return 'HalfEdgeVertex2D[${index}](x: ${x}, y: ${y})';
+    }
 }
 
 class HalfEdge2D {
@@ -25,6 +29,10 @@ class HalfEdge2D {
         this.prev = null; // Initialize prev to null
         this.opposite = null;
     }
+
+    public function toString() : String {
+        return 'HalfEdge2D(v: ${vertex.index})';
+    }
 }
 
 class HalfEdgeFace2D {
@@ -32,6 +40,9 @@ class HalfEdgeFace2D {
 
     public function new() {
         this.edge = null;
+    }
+    public function toString() : String {
+        return 'HalfEdgeFace2D()';
     }
 }
 
@@ -78,18 +89,83 @@ class HalfEdgeMesh2D {
         _constructor = constructor == null ? _defaultConstructor : constructor;
     }
 
+    public static function fromTriangles(triangles:Array<Triangle2D>, constructor: HalfEdgeGeometryConstructor = null) {
+        var mesh = new HalfEdgeMesh2D(constructor);
+
+        for (t in triangles) {
+            var a = mesh.addVertex(t.a.x, t.a.y);
+            var b = mesh.addVertex(t.b.x, t.b.y);
+            var c = mesh.addVertex(t.c.x, t.c.y);
+
+            var face = mesh.addFace([a, b, c]);
+        }
+
+        return mesh;
+    }
     private var _nextID:Int = 0; // For assigning unique indices to vertices
     // Map to find matching half-edges using integer keys
     // Ensure that vertex indices are within 16-bit limits (0 to 65535)
     private var _edgeMap = new Map<Int, HalfEdge2D>();
 
     // Adds a vertex to the mesh and returns its index
-    public function addVertex(x:Float, y:Float):HalfEdgeVertex2D {
+    public inline function addVertex(x:Float, y:Float):HalfEdgeVertex2D {
         var vertex = _constructor.vertex(x, y, _nextID++);
         vertices.push(vertex);
         return vertex;
     }
 
+    public inline function getEdge(a:HalfEdgeVertex2D, b:HalfEdgeVertex2D):HalfEdge2D {
+        var key:Int = (b.index << 16) | a.index;
+        return _edgeMap.get(key);
+    }
+
+    public function insertMidPoint(edge:HalfEdge2D):HalfEdgeVertex2D {
+        
+        // add a new vertex at the midpoint of the edge
+        // add a new edge connecting the new vertex to the original destination vertex
+        // connect the original edge to the new vertex and the new edge
+        var newVertex = addVertex((edge.vertex.x + edge.next.vertex.x) / 2, (edge.vertex.y + edge.next.vertex.y) / 2);
+        var newEdge = _constructor.edge();
+        edges.push(newEdge);
+
+        // new vertex, outgoing edge is the new edge
+        newVertex.edge = newEdge;        
+
+        newEdge.vertex = newVertex;
+        newEdge.face = edge.face;
+        newEdge.next = edge.next;
+        newEdge.prev = edge;
+        edge.next.prev = newEdge;
+        edge.next = newEdge;
+
+        if (edge.opposite != null) {
+            // add a new opposing edge connecting the new vertex to the original origin vertex
+            // connect the opposing edge to the new vertex and the new opposing edge
+            var newOppositeEdge = _constructor.edge();
+            edges.push(newOppositeEdge);
+
+            newOppositeEdge.vertex = newVertex;
+            newOppositeEdge.face = edge.opposite.face;
+            newOppositeEdge.next = edge.opposite.next;
+            newOppositeEdge.prev = edge.opposite;
+            edge.opposite.next.prev = newOppositeEdge;
+            edge.opposite.next = newOppositeEdge;
+            
+            // set the opposite of the new edge to the new opposing edge
+            newEdge.opposite = edge.opposite.opposite;
+            edge.opposite.opposite = newEdge;
+            edge.opposite = newOppositeEdge;
+            newOppositeEdge.opposite = edge;
+        }
+       
+        return newVertex;
+    }
+
+    // one step of quad subidivision
+    public function getSubdivided() : HalfEdgeMesh2D {
+        
+        return null;
+    }
     public static function fromTrianglesRemap(triangles:Array<Triangle2D>, constructor: HalfEdgeGeometryConstructor = null, remap : HalfEdgeRemapCB = null) {
         var mesh = new HalfEdgeMesh2D(constructor);
         var vertexMap = new Map<Point2D, HalfEdgeVertex2D>();

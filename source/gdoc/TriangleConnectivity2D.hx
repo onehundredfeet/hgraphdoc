@@ -26,6 +26,7 @@ class TriangleConnectivity2D {
     var _pointToID = new Map<Point2D, Int>();
     var _pointCount = 0;
     var _edgeMap = new Map<Int, TriEdge2D>();
+    var _vertEdges = new Map<Point2D, Array<TriEdge2D>>();
 
     public var vertIt(get, never):Iterator<Point2D>;
     inline function get_vertIt() {
@@ -59,6 +60,23 @@ class TriangleConnectivity2D {
 		}
 	}
 
+    inline function addEdgeToVertex(v:Point2D, edge:TriEdge2D) {
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            edges = new Array<TriEdge2D>();
+            _vertEdges.set(v, edges);
+        }
+        edges.push(edge);
+    }
+
+    public inline function getEdgeCount(v:Point2D) {
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            return 0;
+        }
+        return edges.length;
+    }
+
     public function getOrCreateEdgeFromPoints(a:Point2D, b:Point2D):TriEdge2D {
         var key = getEdgeKeyFromPoints(a, b);
 
@@ -67,6 +85,9 @@ class TriangleConnectivity2D {
             edge = new TriEdge2D();
             edge.setFromPointsUndirected(a, b);
             _edgeMap.set(key, edge);
+
+            addEdgeToVertex(a, edge);
+            addEdgeToVertex(b, edge);
         }
 
         return edge;

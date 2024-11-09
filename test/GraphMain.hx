@@ -1,5 +1,6 @@
 package test;
 
+import gdoc.PrimConnectivity2D;
 import gdoc.Rect2D;
 import gdoc.Poisson2D;
 import gdoc.PointField2D;
@@ -26,6 +27,9 @@ import gdoc.DelaunayTriangulator;
 import gdoc.TriangleFilter;
 import gdoc.Relax;
 import gdoc.SVGWriter;
+import gdoc.Prim2D;
+import gdoc.PrimConnectivity2D;
+import gdoc.Triangle2D;
 
 using Lambda;
 
@@ -153,44 +157,6 @@ class GraphMain {
 			}
 		}
 
-		// {
-		//     var mesh = new HalfEdgeMesh();
-
-		//     // Add vertices to the mesh
-		//     var v0 = mesh.addVertex(0, 0);
-		//     var v1 = mesh.addVertex(1, 0);
-		//     var v2 = mesh.addVertex(1, 1);
-		//     var v3 = mesh.addVertex(0, 1);
-
-		//     // Add a face (quadrilateral) to the mesh
-		//     mesh.addFace([v0, v1, v2, v3]);
-
-		//     // Compute the dual mesh
-		//     var dualMesh = mesh.computeDual();
-
-		//     // Output the dual mesh data
-		//     trace("Dual Mesh Vertices:");
-		//     for (v in dualMesh.vertices) {
-		//         trace('(' + v.x + ', ' + v.y + ')');
-		//     }
-
-		//     trace("Dual Mesh Faces:");
-		//     for (f in dualMesh.faces) {
-		//         var edge = f.edge;
-		//         var vertices = [];
-		//         do {
-		//             vertices.push(edge.vertex);
-		//             edge = edge.next;
-		//         } while (edge != f.edge);
-
-		//         var s = "";
-		//         for (v in vertices) {
-		//             s += '(' + v.x + ', ' + v.y + ') ';
-		//         }
-		//         trace(s);
-		//     }
-		// }
-
 		testTetrahedron();
 		testCube();
 		testOctahedron();
@@ -233,12 +199,16 @@ class GraphMain {
 		tftestTrianglesWithMultiplePolygons();
 		tftestDegenerateTriangles();
 
-        pftestGenerateEdgePoints();
-        pftestGenerateInteriorPoints();
-        pftestGeneratePointField();
-        pftestMerge();
+		pftestGenerateEdgePoints();
+		pftestGenerateInteriorPoints();
+		pftestGeneratePointField();
+		pftestMerge();
 
 		relaxTriFunadmental();
+
+		heBasic();
+
+		primDisolve();
 	}
 
 	static var passedTests = 0;
@@ -259,7 +229,6 @@ class GraphMain {
 	public static function powerTestEquilateralTriangle():Void {
 		var testName = "Equilateral Triangle with Equal Weights";
 
-		
 		try {
 			var points2D = [
 				WeightedPoint2D.fromPoint2D(new Point2D(0, 0), 1),
@@ -717,8 +686,17 @@ class GraphMain {
 	static function testConcaveStar():Void {
 		trace("Running EarClipping testConcaveStar...");
 		var polygon = [
-			new Point2D(0, 3), new Point2D(1, 1), new Point2D(3, 1), new Point2D(1.5, -1), new Point2D(2.5, -3), new Point2D(0, -2), new Point2D(-2.5, -3),
-			new Point2D(-1.5, -1), new Point2D(-3, 1), new Point2D(-1, 1)];
+			new Point2D(0, 3),
+			new Point2D(1, 1),
+			new Point2D(3, 1),
+			new Point2D(1.5, -1),
+			new Point2D(2.5, -3),
+			new Point2D(0, -2),
+			new Point2D(-2.5, -3),
+			new Point2D(-1.5, -1),
+			new Point2D(-3, 1),
+			new Point2D(-1, 1)
+		];
 
 		var triangles = EarClipping.triangulate(polygon);
 
@@ -1319,12 +1297,11 @@ class GraphMain {
 		trace("Testing generateEdgePoints...");
 
 		// Test with a square
-		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+		var square:Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
 		var spacing = 2.0;
 		var edgePoints = square.generateEdgePoints(spacing);
-        
-        SVGGenerate.writePointField("pf_square_edges.svg", edgePoints );
 
+		SVGGenerate.writePointField("pf_square_edges.svg", edgePoints);
 
 		// Expected number of edge points (approximate)
 		var perimeter = square.getPerimeter();
@@ -1356,14 +1333,18 @@ class GraphMain {
 		trace("Testing generateInteriorPoints...");
 
 		// Test with a square
-		var square : Polygon2D = [new Point2D(-20, -20), new Point2D(20, -20), new Point2D(10, 10), new Point2D(0, 10)];
+		var square:Polygon2D = [
+			new Point2D(-20, -20),
+			new Point2D(20, -20),
+			new Point2D(10, 10),
+			new Point2D(0, 10)
+		];
 		var minDistance = 2.0;
 		var interiorPoints = Poisson2D.pointsOnPolygon(square, minDistance);
 
-        SVGGenerate.writePointField("pf_square_interior.svg", interiorPoints );
+		SVGGenerate.writePointField("pf_square_interior.svg", interiorPoints);
 
-
-        trace('Checking inside...');
+		trace('Checking inside...');
 		// Check that all points are inside the polygon
 		for (p in interiorPoints) {
 			var inside = square.containsPoint(p);
@@ -1373,7 +1354,7 @@ class GraphMain {
 			Assert.assertTrue(inside, 'Interior point should be inside the polygon');
 		}
 
-        trace('Checking min distance...');
+		trace('Checking min distance...');
 		// Check that points are at least minDistance apart
 		for (i in 0...interiorPoints.length) {
 			var p1 = interiorPoints[i];
@@ -1394,14 +1375,13 @@ class GraphMain {
 		trace("Testing generatePointField...");
 
 		// Test with a square
-		var square : Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+		var square:Polygon2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
 		var spacing = 2.0;
-        var edgePoints = square.generateEdgePoints( spacing );
-        var interiorPoints = Poisson2D.pointsOnPolygon(square, spacing, 0.0, edgePoints);
+		var edgePoints = square.generateEdgePoints(spacing);
+		var interiorPoints = Poisson2D.pointsOnPolygon(square, spacing, 0.0, edgePoints);
 		var pointField = edgePoints.concat(interiorPoints);
 
-        SVGGenerate.writePointField("pf_square.svg", pointField );
-
+		SVGGenerate.writePointField("pf_square.svg", pointField);
 
 		// Separate edge and interior points for testing
 		var edgePoints = new Array<Point2D>();
@@ -1462,21 +1442,30 @@ class GraphMain {
 		trace("generatePointField test passed for square.\n");
 	}
 
-    public static function pftestMerge() {
+	public static function pftestMerge() {
 		trace("Testing pftestMerge...");
 
 		// Test with a square
-		var square : PointField2D = [new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10), new Point2D(0, 0), new Point2D(10, 0), new Point2D(10, 10), new Point2D(0, 10)];
+		var square:PointField2D = [
+			new Point2D(0, 0),
+			new Point2D(10, 0),
+			new Point2D(10, 10),
+			new Point2D(0, 10),
+			new Point2D(0, 0),
+			new Point2D(10, 0),
+			new Point2D(10, 10),
+			new Point2D(0, 10)
+		];
 
-        var merged = square.mergeAndRemap();
+		var merged = square.mergeAndRemap();
 
-        Assert.assertEquals(4, merged.points.length, "Merged square should have 4 points");
-        Assert.assertEquals(8, merged.indices.length, "Merged square should have 8 indices");
+		Assert.assertEquals(4, merged.points.length, "Merged square should have 4 points");
+		Assert.assertEquals(8, merged.indices.length, "Merged square should have 8 indices");
 
 		trace("generatePointField test passed for square.\n");
 	}
 
-	public static function writeTriangulation(name : String, triangulation : Array<Triangle2D>) {
+	public static function writeTriangulation(name:String, triangulation:Array<Triangle2D>) {
 		var writer = new SVGWriter();
 		var bounds = Rect2D.fromTriangles(triangulation);
 
@@ -1490,7 +1479,6 @@ class GraphMain {
 
 		writer.finishAndWrite(name);
 	}
-
 
 	public static function relaxTriFunadmental() {
 		trace("Testing relaxTriFunadmental...");
@@ -1512,6 +1500,70 @@ class GraphMain {
 		writeTriangulation('jeremy_end.svg', [jeremyTriangle]);
 
 		trace('Relaxed triangle: ' + jeremyTriangle);
+	}
 
+	public static function heBasic() {
+		var mesh = new HalfEdgeMesh2D();
+
+		// Add vertices to the mesh
+		var v0 = mesh.addVertex(0, 0);
+		var v1 = mesh.addVertex(1, 0);
+		var v2 = mesh.addVertex(1, 1);
+		var v3 = mesh.addVertex(0, 1);
+
+		// Add a face (quadrilateral) to the mesh
+		mesh.addFace([v0, v1, v2, v3]);
+
+		trace('Vertices: ${mesh.vertices}');
+		trace('Edges: ${mesh.edges}');
+		trace('Faces: ${mesh.faces}');
+
+		trace('Inserting midpoint...');
+		var edge = mesh.getEdge(v0, v1);
+		mesh.insertMidPoint(edge);
+
+		trace('Vertices: ${mesh.vertices}');
+		trace('Edges: ${mesh.edges}');
+		trace('Faces: ${mesh.faces}');
+		// // Compute the dual mesh
+		// var dualMesh = mesh.computeDual();
+
+		// // Output the dual mesh data
+		// trace("Dual Mesh Vertices:");
+		// for (v in dualMesh.vertices) {
+		// 	trace('(' + v.x + ', ' + v.y + ')');
+		// }
+
+		// trace("Dual Mesh Faces:");
+		// for (f in dualMesh.faces) {
+		// 	var edge = f.edge;
+		// 	var vertices = [];
+		// 	do {
+		// 		vertices.push(edge.vertex);
+		// 		edge = edge.next;
+		// 	} while (edge != f.edge);
+
+		// 	var s = "";
+		// 	for (v in vertices) {
+		// 		s += '(' + v.x + ', ' + v.y + ') ';
+		// 	}
+		// 	trace(s);
+		// }
+	}
+	public static function primDisolve() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(0, 1);
+		var d = new Point2D(1, 1);
+		var triA = new Triangle2D(a, b, c);
+		var triB = new Triangle2D(c, b, d);
+		var tris : Array<Prim2D> = [triA, triB];
+		var triConnectivity = PrimConnectivity2D.fromPrims(tris);
+
+		trace('pre-dissolve: ' + tris);
+		var edge = triConnectivity.getEdgeFromPoints(b, c);
+		triConnectivity.disolveEdge(edge);
+		var newTris = triConnectivity.gatherFaces();
+		trace('post-dissolve: ' + newTris);
 	}
 }

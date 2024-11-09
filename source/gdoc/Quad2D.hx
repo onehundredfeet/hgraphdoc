@@ -8,10 +8,6 @@ class Quad2D extends Prim2D {
         this.d = d;
 	}
 
-    public override function getVertCount() : Int {
-        return 4;
-    }
-
     function calculateArea():Float {    
         // Apply the Shoelace Formula
         var area = Math.abs(

@@ -29,6 +29,16 @@ class PrimEdge2D extends Edge2D {
             throw "PrimEdge2D.getOppositeFace: Edge does not belong to Prim";
         }
     }
+
+    public function swapFace(face:Prim2D, newFace:Prim2D) {
+        if (faceA == face) {
+            faceA = newFace;
+        } else if (faceB == face) {
+            faceB = newFace;
+        } else {
+            throw "PrimEdge2D.swapFace: Edge does not belong to Prim";
+        }
+    }
 }
 
 class PrimConnectivity2D {
@@ -38,6 +48,7 @@ class PrimConnectivity2D {
     var _pointToID = new Map<Point2D, Int>();
     var _pointCount = 0;
     var _edgeMap = new Map<Int, PrimEdge2D>();
+    var _vertEdges = new Map<Point2D, Array<PrimEdge2D>>();
 
     public var vertIt(get, never):Iterator<Point2D>;
     inline function get_vertIt() {
@@ -71,6 +82,16 @@ class PrimConnectivity2D {
 		}
 	}
 
+    inline function addEdgeToVertex(v:Point2D, edge:PrimEdge2D) {
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            edges = new Array<PrimEdge2D>();
+            _vertEdges.set(v, edges);
+        }
+        edges.push(edge);
+    }
+
+
     inline public function getEdgeFromPoints(a:Point2D, b:Point2D):PrimEdge2D {
         return _edgeMap.get(getEdgeKeyFromPoints(a, b));
     }
@@ -83,9 +104,19 @@ class PrimConnectivity2D {
             edge = new PrimEdge2D();
             edge.setFromPointsUndirected(a, b);
             _edgeMap.set(key, edge);
+
+            addEdgeToVertex(a, edge);
+            addEdgeToVertex(b, edge);
         }
 
         return edge;
+    }
+    public inline function getEdgeCount(v:Point2D) {
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            return 0;
+        }
+        return edges.length;
     }
 
     public function addPrim(p : Prim2D) {
@@ -142,5 +173,63 @@ class PrimConnectivity2D {
             connectivity.addPrim(p);
         }
         return connectivity;
+    }
+
+    public function disolveEdge( e : PrimEdge2D) {       
+        if (e.faceA == null || e.faceB == null) {
+            throw "PrimConnectivity2D.disolveEdge: Edge must have two faces";
+        }
+
+        var a = e.a;
+        var b = e.b;
+
+
+        if (e.faceA.d != null || e.faceB.d != null) {
+            throw "PrimConnectivity2D.disolveEdge: Faces must be triangles";
+        }
+
+        var edgeKey = getEdgeKeyFromPoints(a, b);
+        var edge = _edgeMap.get(edgeKey);
+        
+        function swapPrimOnEdge( swapEdge : PrimEdge2D, oldTri : Prim2D, newPrim : Prim2D) {
+            if (swapEdge != edge) {
+                swapEdge.swapFace(oldTri, newPrim);
+            }
+        }
+        function substitutePrim(newPrim : Prim2D, oldTri : Prim2D) {
+            swapPrimOnEdge(getEdgeFromPoints(oldTri.a, oldTri.b), oldTri, newPrim);
+            swapPrimOnEdge(getEdgeFromPoints(oldTri.b, oldTri.c), oldTri, newPrim);
+            swapPrimOnEdge(getEdgeFromPoints(oldTri.c, oldTri.a), oldTri, newPrim);      
+        }
+
+        var ta : Triangle2D = cast e.faceA;
+        var tb : Triangle2D = cast e.faceB;
+
+        var quad = new Quad2D(e.a, ta.getOppositePointByRef(e.a, e.b), e.b, tb.getOppositePointByRef(e.a, e.b));
+
+        substitutePrim(quad, ta);
+        substitutePrim(quad, tb);
+
+        var edgeListA = _vertEdges.get(a);
+        var edgeListB = _vertEdges.get(b);
+
+        _edgeMap.remove(edgeKey);
+
+        edgeListA.remove(e);
+        edgeListB.remove(e);
+    }
+
+    public function gatherFaces() : Array<Prim2D> {
+        var faces = new Map<Prim2D, Bool>();
+
+        for (edge in _edgeMap) {
+            if (edge.faceA != null) {
+                faces.set(edge.faceA, true);
+            }
+            if (edge.faceB != null) {
+                faces.set(edge.faceB, true);
+            }
+        }
+        return [for (f in faces.keys()) f];
     }
 }
