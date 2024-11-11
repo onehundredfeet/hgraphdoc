@@ -2,4 +2,5 @@
 --main test.GraphMain
 --library seedyrng
 --library hvector
+-D hl-ver=1.14.0
 -hl bin/test.hl
