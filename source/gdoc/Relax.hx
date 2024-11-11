@@ -309,7 +309,7 @@ class Relax {
 
 		
 
-		function computeAndApplyForce( a : Point2D, b : Point2D, targetLength : Float, scale:Float) {
+		function computeAndApplyForce( a : Point2D, b : Point2D, targetLength : Float, scale:Float, squareScale = 0.0) {
 			var dx = b.x - a.x;
 			var dy = b.y - a.y;
 			var currentLength = Math.sqrt(dx * dx + dy * dy);
@@ -323,8 +323,7 @@ class Relax {
 				if (mag < RELAX_EPISLON) {
 					return;
 				}
-				var forceStrength = mag * stiffness1 * sign * scale;
-
+				var forceStrength = mag * stiffness1 * sign * scale + mag * mag * stiffness1 * sign * squareScale;
 				// normalize the vector to get the direction from a to b
 				// if the force is attractive, i.e. positive, then a should move towards b and vice versa
 				dx /= currentLength; 
@@ -379,8 +378,8 @@ class Relax {
 			applyForce(b, fdx2 * forceStrength, fdy2 * forceStrength);
 		}
 		final PI_3 = Math.PI / 3;
-		final LOCAL_QUAD_EDGE_STRENGTH = 0.25 * 1.5;
-		final LOCAL_TRI_EDGE_STRENGTH = (1.0 / 3.0) * 1.5;
+		final LOCAL_QUAD_EDGE_STRENGTH = 0.25 * 2;
+		final LOCAL_TRI_EDGE_STRENGTH = (1.0 / 3.0) * 1;
 		for (i in 0...iterations) {
 			for (e in edges) {
 				computeAndApplyForce(e.a, e.b, avergeEdgeLength, 0.75);
@@ -398,10 +397,10 @@ class Relax {
 
 					var averageLocalLength = (ab + bc + cd + da) * 0.25;
 
-					computeAndApplyForce(p.a, p.b, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH);
-					computeAndApplyForce(p.b, p.c, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH);
-					computeAndApplyForce(p.c, p.d, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH);
-					computeAndApplyForce(p.d, p.a, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH);
+					computeAndApplyForce(p.a, p.b, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
+					computeAndApplyForce(p.b, p.c, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
+					computeAndApplyForce(p.c, p.d, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
+					computeAndApplyForce(p.d, p.a, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
 
 					computeAndApplyForce(p.a, p.c, averageEdgeLengthRoot2, 0.5);
 					computeAndApplyForce(p.b, p.d, averageEdgeLengthRoot2, 0.5);

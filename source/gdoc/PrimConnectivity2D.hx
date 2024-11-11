@@ -24,6 +24,17 @@ class PrimEdge2D extends Edge2D {
         }
     }
 
+    public inline function getOppositePointByRef(p:Point2D) {
+        if (a == p) {
+            return b;
+        } else if (b == p) {
+            return a;
+        } else {
+            throw "PrimEdge2D.getOppositePointByRef: Point does not belong to Edge";
+        }
+
+    }
+
     public inline function getOppositeFace(face:Prim2D) {
         if (faceA == face) {
             return faceB;
@@ -34,13 +45,34 @@ class PrimEdge2D extends Edge2D {
         }
     }
 
-    public function swapFace(face:Prim2D, newFace:Prim2D) {
+    public inline function swapFace(face:Prim2D, newFace:Prim2D) {
         if (faceA == face) {
             faceA = newFace;
         } else if (faceB == face) {
             faceB = newFace;
         } else {
             throw "PrimEdge2D.swapFace: Edge does not belong to Prim";
+        }
+    }
+    public inline function getSharedFace(e:PrimEdge2D):Prim2D {
+        if (faceA == e.faceA || faceA == e.faceB) {
+            return faceA;
+        } else if (faceB == e.faceA || faceB == e.faceB) {
+            return faceB;
+        } else {
+            return null;
+        }
+    }
+    // returns true if empty
+    public inline function removeFaceFromEdge(face:Prim2D) : Bool {
+        if (faceA == face) {
+            faceA = null;
+            return faceB == null;
+        } else if (faceB == face) {
+            faceB = null;
+            return faceA == null;
+        } else {
+            throw "PrimEdge2D.removeFaceFromEdge: Edge does not belong to Prim";
         }
     }
 }
@@ -235,9 +267,109 @@ class PrimConnectivity2D {
         edgeListA.remove(e);
         edgeListB.remove(e);
     }
+    public function isVertexExternal(v:Point2D) {
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            return true;
+        }
+        for (e in edges) {
+            if (e.faceA == null || e.faceB == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function removeEdgeFromVertex(v:Point2D, e:PrimEdge2D) {
+        var vaedges = _vertEdges.get(v);
+        vaedges.remove(e);
+        if (vaedges.length == 0) {
+            _vertEdges.remove(v);
+            _pointToID.remove(v);
+        }
+    }
+    
+    
+    public function removeFace( f : Prim2D ) {
+        function removeFaceFromEdge(e:PrimEdge2D) {
+            if (e.removeFaceFromEdge(f)) {
+                _edgeMap.remove(getEdgeKeyFromPoints(e.a, e.b));
+                removeEdgeFromVertex(e.a, e);
+                removeEdgeFromVertex(e.b, e);
+            }
+        }
+        removeFaceFromEdge(getEdgeFromPoints(f.a, f.b));
+        removeFaceFromEdge(getEdgeFromPoints(f.b, f.c));
+
+        if (f.d != null) {
+            removeFaceFromEdge(getEdgeFromPoints(f.c, f.d));
+            removeFaceFromEdge(getEdgeFromPoints(f.d, f.a));
+        } else {
+            removeFaceFromEdge(getEdgeFromPoints(f.c, f.a));
+        }
+    }
+    public function disolveVertex(v: Point2D) {
+        if (isVertexExternal(v)) {
+            throw "PrimConnectivity2D.disolveVertex: Vertex is external";
+        }
+        var edges = _vertEdges.get(v);
+        if (edges == null) {
+            throw "PrimConnectivity2D.disolveVertex: Vertex has no edges";
+        }
+
+        var faces = getFacesAroundVert(v);
+
+        var verts = new Array<Point2D>();
+        inline function addVert(pv:Point2D) {
+            if (pv != v && !verts.contains(pv)) {
+                verts.push(pv);
+            }
+        }
+        // collect all permiter vertices
+        for (f in faces) {
+            addVert(f.a);
+            addVert(f.b);
+            addVert(f.c);
+            if (f.d != null) {
+                addVert(f.d);
+            }
+        }
+        
+        if (verts.length < 3) {
+            throw "PrimConnectivity2D.disolveVertex: Vertex has less than 3 perimeter vertices";
+        } else if (verts.length > 4) {
+            throw "PrimConnectivity2D.disolveVertex: Vertex has more than 4 perimeter vertices";
+        }
+
+        trace('disolving vertex ${v} with ${faces.length} faces and ${verts.length} perimeter vertices');
+
+        for (f in faces) {
+            removeFace(f);
+        }
+    }
 
     public inline function getEdgesAroundVert(p:Point2D) {
         return _vertEdges.get(p);
+    }
+    public function getFacesAroundVert(p:Point2D) {
+        var edges = _vertEdges.get(p);
+        if (edges == null) {
+            return null;
+        }
+        var faces = [];
+        for (e in edges) {
+            if (e.faceA != null) {
+                if (!faces.contains(e.faceA)) {
+                    faces.push(e.faceA);
+                }
+            }
+            if (e.faceB != null) {
+                if (!faces.contains(e.faceB)) {
+                    faces.push(e.faceB);
+                }
+            }
+        }
+        return faces;
     }
 
     public function gatherFaces() : Array<Prim2D> {
@@ -298,4 +430,48 @@ class PrimConnectivity2D {
         return newConnectivity;
     }
     
+    public function walkConnectedFaces( f : Prim2D, cb : Prim2D -> Void) {
+        inline function cbwrap(e : PrimEdge2D) {
+            if (e != null) {
+                var of = e.getOppositeFace(f);
+                if (of != null) {
+                    cb(of);
+                }
+            }
+        }
+        cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.a, f.b)));
+        cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.b, f.c)));
+
+        if (f.d != null) {
+            cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.c, f.d)));
+            cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.d, f.a)));
+        }
+        else {
+            cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.c, f.a)));
+        }
+    }
+
+    public function getSortedEdgesAroundVertex(origin:Point2D ) {
+        var edges = _vertEdges.get(origin);
+
+        // sorting in place as order doesn't matter - questionable justification
+        edges.sort(function(a:PrimEdge2D, b:PrimEdge2D):Int {
+            var edgeAP = a.getOppositePointByRef(origin);
+            var edgeBP = b.getOppositePointByRef(origin);
+            var angleA = Math.atan2(edgeAP.y - origin.y, edgeAP.x - origin.x);
+            var angleB = Math.atan2(edgeBP.y - origin.y, edgeBP.x - origin.x);
+
+            if (angleA < 0) angleA += Math.PI * 2;
+            if (angleB < 0) angleB += Math.PI * 2;
+
+            if (angleA < angleB)
+                return -1;
+            else if (angleA > angleB)
+                return 1;
+            else
+                return 0;
+
+        });
+        return edges;
+    }
 }

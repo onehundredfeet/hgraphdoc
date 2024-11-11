@@ -210,6 +210,7 @@ class GraphMain {
 		heBasic();
 
 		primDisolve();
+		primRemove();
 		primSubdivide();
 		primAngles();
 		primRelax();
@@ -1569,6 +1570,46 @@ class GraphMain {
 		triConnectivity.disolveEdge(edge);
 		var newTris = triConnectivity.gatherFaces();
 		trace('post-dissolve: ' + newTris);
+	}
+
+	static function getPrimStats(connectivity:PrimConnectivity2D) {
+		var vertCount = 0;
+		for (v in connectivity.vertIt) {
+			vertCount++;
+		}
+
+		var edgeCount = 0;
+		for (e in connectivity.edgeIt) {
+			edgeCount++;
+		}
+		return { verts: vertCount, edges: edgeCount };
+	}
+	public static function primRemove() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(1, 1);
+		var d = new Point2D(0, 1);
+		var q = new Quad2D(a, b, c, d);
+		var quads : Array<Prim2D> = [q];
+		var quadConnectivity = PrimConnectivity2D.fromPrims(quads);
+
+		trace('pre-remove: ' + quads + ' ' + getPrimStats(quadConnectivity));
+		quadConnectivity.removeFace(q);
+		
+		trace('post-remove: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+
+		var e = new Point2D( 2, 0 );
+		var f = new Point2D( 2, 1 );
+
+		var quad2 = new Quad2D(c, b, e, f);
+		quads.push(quad2);
+		quadConnectivity = PrimConnectivity2D.fromPrims(quads);
+		trace('pre-remove2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		quadConnectivity.removeFace(quad2);
+		trace('post-remove2-1: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		quadConnectivity.removeFace(q);
+		trace('post-remove2-2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		
 	}
 
 	public static function primSubdivide() {
