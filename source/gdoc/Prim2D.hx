@@ -14,6 +14,14 @@ class Prim2D {
         return d == null ? 3 : 4;
     }
 
+    public inline function isQuad() : Bool {
+        return d != null;
+    }
+
+    public inline function isTriangle() : Bool {
+        return d == null;
+    }
+
     public inline function getPoint(idx:Int) : Point2D {
         return switch(idx) {
             case 0: a;
@@ -109,5 +117,24 @@ class Prim2D {
             Point2D.angleBetweenCCPoints(d, c, a)
         ];
     }
-    
+    public inline function arrayGet(n:Int) {
+        return switch(n) {
+            case 0: a;
+            case 1: b;
+            case 2: c;
+            case 3: d != null ? d : throw "Invalid index";
+            default: throw "Invalid index";
+        }
+    }
+
+    public function arraySet(n:Int, v:Point2D) {
+        switch(n) {
+            case 0: a = v;
+            case 1: b = v;
+            case 2: c = v;
+            case 3: d = v;
+            default: throw "Invalid index";
+        }
+    }
+
 }

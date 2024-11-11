@@ -145,5 +145,22 @@ class Point2D {
         return new Point2D(x / n, y / n);
     }
     
+    public static inline function sortPointsCCWAroundCenter(c : Point2D, points : Array<Point2D>) {
+        points.sort(function(a:Point2D, b:Point2D):Int {
+            var angleA = Math.atan2(a.y - c.y, a.x - c.x);
+            var angleB = Math.atan2(b.y - c.y, b.x - c.x);
+
+            if (angleA < 0) angleA += Math.PI * 2;
+            if (angleB < 0) angleB += Math.PI * 2;
+
+            if (angleA < angleB)
+                return -1;
+            else if (angleA > angleB)
+                return 1;
+            else
+                return 0;
+        });
+        return points;
+    }
 }
 

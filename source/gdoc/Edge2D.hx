@@ -185,6 +185,13 @@ class Edge2D {
             return r.x <= Math.max(p.x, q.x) && r.x >= Math.min(p.x, q.x) &&
                    r.y <= Math.max(p.y, q.y) && r.y >= Math.min(p.y, q.y);
         }
+    @:op([]) public inline function arrayRead(n:Int) if (n == 0) return a; else return b;
 
+    public inline function hasEndpoints( p1 : Point2D, p2 : Point2D ) {
+        return (a == p1 && b == p2) || (a == p2 && b == p1);
+    }
+    public inline function hasEndpoint( p1 : Point2D ) {
+        return a == p1 || b == p1;
+    }
 }
 

@@ -210,6 +210,8 @@ class GraphMain {
 		heBasic();
 
 		primDisolve();
+		primDisolveVert();
+		primCollapseEdge();
 		primRemove();
 		primSubdivide();
 		primAngles();
@@ -1572,6 +1574,67 @@ class GraphMain {
 		trace('post-dissolve: ' + newTris);
 	}
 
+	public static function primDisolveVert() {
+		var center = new Point2D(0.5, 0.5);
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(1, 1);
+		var d = new Point2D(0, 1);
+		var triA = new Triangle2D(center, a, b);
+		var triB = new Triangle2D(center, b, c);
+		var quad = new Quad2D(center, c, d, a);
+		var connectivity = PrimConnectivity2D.fromPrims([triA, triB, quad]);
+
+		trace('primDisolveVert : pre-dissolve: ' + connectivity.gatherFaces() + " " + getPrimStats(connectivity));
+
+		connectivity.disolveVertex(center);
+
+		trace('primDisolveVert : post-dissolve: ' + connectivity.gatherFaces() + " " + getPrimStats(connectivity));
+	}
+
+	public static function primCollapseEdge() {
+		var a = new Point2D(-1, 0.5);
+		var b = new Point2D(0, 0);
+		var c = new Point2D(0, 1);
+		var d = new Point2D(1, 0.5);
+		var triA = new Triangle2D(a, b, c);
+		var triB = new Triangle2D(c, b, d);
+		var tris : Array<Prim2D> = [triA, triB];
+		var connectivity = PrimConnectivity2D.fromPrims(tris);
+
+		trace('primCollapseEdge : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+		connectivity.collapseEdge(b,c);
+		trace('primCollapseEdge: Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+
+		var e = new Point2D(0.0, 2.0);
+		var f = new Point2D(-1, 2.0);
+		var q1 = new Quad2D(a, f, e, c);
+
+		var g = new Point2D(0, -1);
+		var h = new Point2D(-1, -1);
+		var q2 = new Quad2D(a, h, g, b);
+
+		connectivity = PrimConnectivity2D.fromPrims([triA, triB, q1, q2]);
+
+		trace('primCollapseEdge 2 : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+		connectivity.collapseEdge(b,c);
+		trace('primCollapseEdge 2 : Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+
+		var i = new Point2D(1, 2);
+		var j = new Point2D(1, -1);
+		q1 = new Quad2D(a, d, e, c);
+		q2 = new Quad2D(a, h, g, b);
+		var q3 = new Quad2D(c, b, j, i);
+
+		connectivity = PrimConnectivity2D.fromPrims([triA, q1, q2, q3]);
+		trace('primCollapseEdge 3 : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+		connectivity.collapseEdge(b,c);
+		trace('primCollapseEdge 3 : Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
+
+		throw('done');
+
+	}
+
 	static function getPrimStats(connectivity:PrimConnectivity2D) {
 		var vertCount = 0;
 		for (v in connectivity.vertIt) {
@@ -1593,10 +1656,10 @@ class GraphMain {
 		var quads : Array<Prim2D> = [q];
 		var quadConnectivity = PrimConnectivity2D.fromPrims(quads);
 
-		trace('pre-remove: ' + quads + ' ' + getPrimStats(quadConnectivity));
+		trace('primRemove pre-remove: ' + quads + ' ' + getPrimStats(quadConnectivity));
 		quadConnectivity.removeFace(q);
 		
-		trace('post-remove: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		trace('primRemove post-remove: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
 
 		var e = new Point2D( 2, 0 );
 		var f = new Point2D( 2, 1 );
@@ -1604,11 +1667,11 @@ class GraphMain {
 		var quad2 = new Quad2D(c, b, e, f);
 		quads.push(quad2);
 		quadConnectivity = PrimConnectivity2D.fromPrims(quads);
-		trace('pre-remove2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		trace('primRemove pre-remove2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
 		quadConnectivity.removeFace(quad2);
-		trace('post-remove2-1: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		trace('primRemove post-remove2-1: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
 		quadConnectivity.removeFace(q);
-		trace('post-remove2-2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
+		trace('primRemove post-remove2-2: ' + quadConnectivity.gatherFaces() + ' ' + getPrimStats(quadConnectivity));
 		
 	}
 
