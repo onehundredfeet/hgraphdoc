@@ -158,7 +158,7 @@ class Point2D {
             else if (angleA > angleB)
                 return 1;
             else
-                return 0;
+                throw 'Points are equal ' + a + ' ' + b;
         });
         return points;
     }

@@ -31,6 +31,12 @@ class Prim2D {
             default: throw "Invalid index";
         }
     }
+    public inline function getPointSafe(idx:Int) : Point2D {
+        var vc = getVertCount();
+        while (idx < 0) idx += vc;
+        while (idx >= vc) idx = idx % vc;
+        return getPoint(idx);
+    }
 
     public inline function isCCW() {
         if (d == null) {
@@ -78,6 +84,14 @@ class Prim2D {
                 break;
             }
         }
+        return -1;
+    }
+
+    public function getVertexIndex(v : Point2D) : Int {
+        if (v == a) return 0;
+        if (v == b) return 1;
+        if (v == c) return 2;
+        if (d != null && v == d) return 3;
         return -1;
     }
     
@@ -135,6 +149,17 @@ class Prim2D {
             case 3: d = v;
             default: throw "Invalid index";
         }
+    }
+
+    public function getOtherPoints(p : Point2D) : Array<Point2D> {
+        var result = new Array<Point2D>();
+        for (i in 0...getVertCount()) {
+            var v = getPoint(i);
+            if (v != p) {
+                result.push(v);
+            }
+        }
+        return result;
     }
 
 }

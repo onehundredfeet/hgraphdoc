@@ -9,6 +9,11 @@ class Edge2D {
         
     }
 
+    public inline function getOtherPoint(p:Point2D):Point2D {
+        if (a == p) return b;
+        if (b == p) return a;
+        return null;
+    }
     public inline function clone():Edge2D {
         var edge = new Edge2D();
         edge.a = a;

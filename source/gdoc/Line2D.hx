@@ -244,6 +244,33 @@ abstract Line2D(Point3D) from Point3D {
         return Math.min(Math.min(d1, d2), Math.min(d3, d4));
     }
 
+    public static function segmentIntersection(a1 : Point2D, b1 : Point2D, a2 : Point2D, b2:Point2D ) : Point2D {
+		var s1x = b1.x - a1.x;
+		var s1y = b1.y - a1.y;
+		var s2x = b2.x - a2.x;
+		var s2y = b2.y - a2.y;
+
+		var denominator = (-s2x * s1y + s1x * s2y);
+
+		if (denominator == 0) {
+			// Lines are parallel or colinear
+			return null;
+		}
+
+		var s = (-s1y * (a1.x - a2.x) + s1x * (a1.y - a2.y)) / denominator;
+		var t = (s2x * (a1.y - a2.y) - s2y * (a1.x - a2.x)) / denominator;
+
+		if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+			// Intersection detected
+			var ix = a1.x + (t * s1x);
+			var iy = a1.y + (t * s1y);
+			return new Point2D(ix, iy);
+		}
+
+		// No intersection
+		return null;
+	}
+
     public static function segmentIntersectionXY(x1:Float, y1:Float, x2:Float, y2:Float, x3:Float, y3:Float, x4:Float, y4:Float) : Point2D {
 		var s1x = x2 - x1;
 		var s1y = y2 - y1;

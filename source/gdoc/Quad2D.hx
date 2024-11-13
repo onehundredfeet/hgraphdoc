@@ -118,7 +118,21 @@ class Quad2D extends Prim2D {
         return false; 
     }
 
-    public function calculateCenter() {
+    public inline function calculateCenter() {
         return new Point2D((a.x + b.x + c.x + d.x) * 0.25, (a.y + b.y + c.y + d.y) * 0.25);
+    }
+    public inline function getOppositePointByRef( p : Point2D ) {
+        if (a == p) return c;
+        if (b == p) return d;
+        if (c == p) return a;
+        if (d == p) return b;
+        return null;
+    }
+    public inline function getPointIndex( p : Point2D ) {
+        if (a == p) return 0;
+        if (b == p) return 1;
+        if (c == p) return 2;
+        if (d == p) return 3;
+        return -1;
     }
 }

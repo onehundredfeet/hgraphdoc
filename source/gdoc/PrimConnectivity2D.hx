@@ -54,6 +54,7 @@ class PrimEdge2D extends Edge2D {
 		}
 	}
 
+   
 	public inline function getSharedFace(e:PrimEdge2D):Prim2D {
 		if (faceA == e.faceA || faceA == e.faceB) {
 			return faceA;
@@ -98,6 +99,9 @@ class PrimEdge2D extends Edge2D {
 
     public function toString() {
         return 'PrimEdge2D(${a}, ${b})';
+    }
+    public inline function containsFace( f : Prim2D ) {
+        return faceA == f || faceB == f;
     }
 }
 
@@ -181,7 +185,38 @@ class PrimConnectivity2D {
 		return edges.length;
 	}
 
+    public function splitQuad( q : Quad2D, vert : Int ) {
+        removeFace(q);
+        var splitVert = q.getPoint(vert);
+        var prev = q.getPointSafe(vert - 1);
+        var next = q.getPointSafe(vert + 1);
+        var opposite = q.getPointSafe(vert + 2);
+        
+        addPrim(new Triangle2D(prev, splitVert, opposite));
+        addPrim(new Triangle2D(splitVert, next, opposite));
+    }
+    public function getSharedEdge( a : Triangle2D, b : Triangle2D) {
+        var e0 = getEdgeFromPoints(a.a, a.b);
+        if (e0.containsFace(b)) {
+            return e0;
+        }
+        var e1 = getEdgeFromPoints(a.b, a.c);
+        if (e1.containsFace(b)) {
+            return e1;
+        }
+        var e2 = getEdgeFromPoints(a.c, a.a);
+        if (e2.containsFace(b)) {
+            return e2;
+        }
+        return null;
+    }
 	public function addPrim(p:Prim2D) {
+        if (p.a == p.b || p.b == p.c || p.c == p.a) {
+            throw 'duplicate points ${p}';
+        }
+        if (p.a.eqval(p.b) || p.b.eqval(p.c) || p.c.eqval(p.a)) {
+            throw 'duplicate points by value ${p}';
+        }
 		var edgeA = getOrCreateEdgeFromPoints(p.a, p.b);
 		edgeA.addFace(p);
 		var edgeB = getOrCreateEdgeFromPoints(p.b, p.c);
@@ -426,8 +461,6 @@ class PrimConnectivity2D {
         var faceANullIdx = faceAEdges.indexOf(null);
         var faceBNullIdx = faceBEdges.indexOf(null);
 
-        trace('edge faces ${edge.faceA} ${edge.faceB}');
-
         var faceA = edge.faceA;
         var faceB = edge.faceB;
 
@@ -439,7 +472,6 @@ class PrimConnectivity2D {
         removeFace(edge.faceB);
 
         if (faceA.d == null && faceB.d == null && otherFacesAroundA.length == 0 && otherFacesAroundB.length == 0) {
-            trace('Empty graph');
             return;
         }
 
@@ -588,25 +620,54 @@ class PrimConnectivity2D {
 		return newConnectivity;
 	}
 
-	public function walkConnectedFaces(f:Prim2D, cb:Prim2D->Void) {
-		inline function cbwrap(e:PrimEdge2D) {
-			if (e != null) {
-				var of = e.getOppositeFace(f);
-				if (of != null) {
-					cb(of);
-				}
-			}
-		}
-		cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.a, f.b)));
-		cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.b, f.c)));
+	public function walkConnectedFaces(f:Prim2D, cb:Prim2D->Void) : Bool{
+        var faceEdges = getFaceEdgesChecked(f);
+        if (faceEdges == null) {
+            return false;
+        }
 
-		if (f.isQuad()) {
-			cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.c, f.d)));
-			cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.d, f.a)));
-		} else {
-			cbwrap(_edgeMap.get(getEdgeKeyFromPoints(f.c, f.a)));
-		}
+        for (e in faceEdges) {
+            var of = e.getOppositeFace(f);
+            if (of != null) {
+                cb(of);
+            }
+        }
+        return true;
 	}
+
+    public function getFaceEdges(face:Prim2D) {
+        return face.isQuad() ? 
+        [getEdgeFromPoints(face.a, face.b), getEdgeFromPoints(face.b, face.c), getEdgeFromPoints(face.c, face.d), getEdgeFromPoints(face.d, face.a)] : 
+        [getEdgeFromPoints(face.a, face.b), getEdgeFromPoints(face.b, face.c), getEdgeFromPoints(face.c, face.a)];
+    }
+
+    public function getFaceEdgesChecked(face:Prim2D) {
+        var a = getEdgeFromPoints(face.a, face.b);
+        if (a == null || !a.containsFace(face)) return null;
+        var b = getEdgeFromPoints(face.b, face.c);
+        if (b == null || !b.containsFace(face)) return null;
+
+        if (face.isQuad()) {
+            var c = getEdgeFromPoints(face.c, face.d);
+            if (c == null || !c.containsFace(face)) return null;
+            var d = getEdgeFromPoints(face.d, face.a);
+            if (d == null ||!d.containsFace(face)) return null;
+            return [a, b, c, d];
+        } 
+        var c = getEdgeFromPoints(face.c, face.a);
+        if (c == null) return null;
+        return [a, b, c];
+    }
+    
+    public function getSortedVertsAroundVertex( origin:Point2D) {
+        var edges = _vertEdges.get(origin);
+        var verts = [];
+        for (e in edges) {
+            verts.push(e.getOppositePointByRef(origin));
+        }
+        Point2D.sortPointsCCWAroundCenter(origin, verts);
+        return verts;
+    }
 
 	public function getSortedEdgesAroundVertex(origin:Point2D) {
 		var edges = _vertEdges.get(origin);

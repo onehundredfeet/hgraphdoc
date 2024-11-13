@@ -298,6 +298,9 @@ class Relax {
 
 		inline function applyForce(p : Point2D, fx : Float, fy : Float) {
 			var accuma = forceAccum[connectivity.getPointID(p)];
+			if (accuma == null) {
+				throw('no accumulator for $p');
+			}
 			accuma.x += fx;
 			accuma.y += fy;
 		}
@@ -337,7 +340,7 @@ class Relax {
 			}
 		}
 
-		function computeAndApplyAngularForce(p: Point2D, a : Point2D, b:Point2D, targetAngle : Float) {
+		function computeAndApplyAngularForce(p: Point2D, a : Point2D, b:Point2D, targetAngle : Float, strenth:Float) {
 			var angle = Point2D.angleBetweenCCPoints(p, a, b);
 
 			var delta = angle - targetAngle;
@@ -347,7 +350,7 @@ class Relax {
 			if (mag < RELAX_EPISLON) {
 				return;
 			}
-			var forceStrength = mag * angularStiffness * sign;
+			var forceStrength = mag * angularStiffness * sign * strenth;
 
 			// the force we want is perpendicular to the line from a to b
 			var dx1 = a.x - p.x;
@@ -377,9 +380,9 @@ class Relax {
 			applyForce(a, fdx1 * forceStrength, fdy1 * forceStrength);
 			applyForce(b, fdx2 * forceStrength, fdy2 * forceStrength);
 		}
-		final PI_3 = Math.PI / 3;
-		final LOCAL_QUAD_EDGE_STRENGTH = 0.25 * 2;
-		final LOCAL_TRI_EDGE_STRENGTH = (1.0 / 3.0) * 1;
+		final PI_3 = Math.PI / 5;
+		final LOCAL_QUAD_EDGE_STRENGTH = 0.25 * 3;
+		final LOCAL_TRI_EDGE_STRENGTH = (1.0 / 3.0) * 3;
 		for (i in 0...iterations) {
 			for (e in edges) {
 				computeAndApplyForce(e.a, e.b, avergeEdgeLength, 0.75);
@@ -405,10 +408,10 @@ class Relax {
 					computeAndApplyForce(p.a, p.c, averageEdgeLengthRoot2, 0.5);
 					computeAndApplyForce(p.b, p.d, averageEdgeLengthRoot2, 0.5);
 
-					computeAndApplyAngularForce( p.a, p.d, p.b,Math.PI * 0.5);
-					computeAndApplyAngularForce( p.b, p.a, p.c,Math.PI * 0.5);
-					computeAndApplyAngularForce( p.c, p.b, p.d,Math.PI * 0.5);
-					computeAndApplyAngularForce( p.d, p.c, p.a,Math.PI * 0.5);
+					computeAndApplyAngularForce( p.a, p.d, p.b,Math.PI * 0.5, 1.0);
+					computeAndApplyAngularForce( p.b, p.a, p.c,Math.PI * 0.5, 1.0);
+					computeAndApplyAngularForce( p.c, p.b, p.d,Math.PI * 0.5, 1.0);
+					computeAndApplyAngularForce( p.d, p.c, p.a,Math.PI * 0.5, 1.0);
 				} else {
 					var ab = Point2D.pointDistanceToXY(p.a.x, p.a.y, p.b.x, p.b.y);
 					var bc = Point2D.pointDistanceToXY(p.b.x, p.b.y, p.c.x, p.c.y);
@@ -422,9 +425,9 @@ class Relax {
 					computeAndApplyForce(p.b, p.c, averageLocalLength,  LOCAL_TRI_EDGE_STRENGTH);
 					computeAndApplyForce(p.c, p.a, averageLocalLength,  LOCAL_TRI_EDGE_STRENGTH);
 
-					computeAndApplyAngularForce( p.a, p.c, p.b,PI_3);
-					computeAndApplyAngularForce( p.b, p.a, p.c,PI_3);
-					computeAndApplyAngularForce( p.c, p.b, p.a,PI_3);
+					computeAndApplyAngularForce( p.a, p.c, p.b,PI_3, 2.0);
+					computeAndApplyAngularForce( p.b, p.a, p.c,PI_3, 2.0);
+					computeAndApplyAngularForce( p.c, p.b, p.a,PI_3, 2.0);
 				}
 
 			}
