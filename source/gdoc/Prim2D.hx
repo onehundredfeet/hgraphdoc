@@ -162,4 +162,15 @@ class Prim2D {
         return result;
     }
 
+    public function containsEdge(a : Point2D, b : Point2D) : Bool {
+        for (i in 0...getVertCount()) {
+            if (getPoint(i) == a) {
+                if (getPointSafe(i + 1) == b) return true;
+                if (getPointSafe(i - 1) == b) return true;
+                break;
+            }
+        }
+        return false;
+    }
+
 }

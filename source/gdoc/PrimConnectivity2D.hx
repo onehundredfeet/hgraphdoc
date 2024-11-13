@@ -103,6 +103,32 @@ class PrimEdge2D extends Edge2D {
     public inline function containsFace( f : Prim2D ) {
         return faceA == f || faceB == f;
     }
+
+    public function getPseudoQuad() {
+		if (faceA == null || faceB == null) {
+			return null;
+		}
+		if (faceA.isQuad() || faceB.isQuad()) {
+			return null;
+		}
+		var ta:Triangle2D = cast faceA;
+		var tb:Triangle2D = cast faceB;
+		var fao = ta.getOppositePointByRef(a, b);
+		var fbo = tb.getOppositePointByRef(a, b);
+
+		var oai = ta.getVertexIndex(fao);
+		var obi = tb.getVertexIndex(fbo);
+
+		var vquad = [fao, ta.getPointSafe(oai + 1), fbo, ta.getPointSafe(oai + 2)];
+		var angles = [
+			Point2D.angleBetweenCCPoints(vquad[0], vquad[3], vquad[1]),
+			Point2D.angleBetweenCCPoints(vquad[1], vquad[0], vquad[2]),
+			Point2D.angleBetweenCCPoints(vquad[2], vquad[1], vquad[3]),
+			Point2D.angleBetweenCCPoints(vquad[3], vquad[2], vquad[0])
+		];
+		return {points: vquad, angles : angles};
+	}
+
 }
 
 class PrimConnectivity2D {
@@ -693,4 +719,50 @@ class PrimConnectivity2D {
 		});
 		return edges;
 	}
+
+
+    public function verify( throwIfInvalid = false ) : Bool {
+        function doReturn(msg : String) {
+            if (throwIfInvalid) {
+                throw msg;
+            }
+            trace(msg);
+            return false;
+        }
+        var usedPoints = new Map<Point2D, Bool>();
+
+        for (e in edgeIt) {
+            if (e.faceA == null && e.faceB == null)  return doReturn('Edge has no faces ${e}');
+            if (e.faceA != null && !e.faceA.containsEdge(e.a, e.b)) return doReturn('Face A does not contain edge ${e.faceA} ${e}');
+            if (e.faceB != null && !e.faceB.containsEdge(e.a, e.b)) return doReturn('Face B does not contain edge ${e.faceB} ${e}');
+            if (e.faceA == e.faceB) return doReturn('Edge has same face twice ${e}');
+            if (e.faceA != null) {
+                for (i in 0...e.faceA.getVertCount()) {
+                    var v = e.faceA.getPoint(i);
+                    if (_vertEdges.get(v) == null) return doReturn('Face A has vertex with no edges ${e.faceA}');
+                    usedPoints.set(v, true);
+                }
+                if (!e.faceA.isCCW()) return doReturn('Face A is not CCW ${e.faceA}');
+            }
+            if (e.faceB != null) {
+                for (i in 0...e.faceB.getVertCount()) {
+                    var v = e.faceB.getPoint(i);
+                    if (_vertEdges.get(v) == null) return doReturn('Face B has vertex with no edges ${e.faceB}');
+                    usedPoints.set(v, true);
+                }
+                if (!e.faceB.isCCW()) return doReturn('Face B is not CCW ${e.faceB}');
+            }
+        }
+
+        for (v in vertIt) {
+            if (!usedPoints.exists(v)) return doReturn('Vertex is not referenced by edges ${v}');
+            if (Math.isNaN(v.x) || Math.isNaN(v.y)) return doReturn('Vertex has NaN ${v}');
+        }
+        return true;
+    }
+
+    public inline function isValidEdge( a : Point2D, b : Point2D ) {
+        return getEdgeFromPoints(a, b) != null;
+    }
+
 }
