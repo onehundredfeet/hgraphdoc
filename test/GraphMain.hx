@@ -1604,6 +1604,7 @@ class GraphMain {
 
 		trace('primCollapseEdge : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
 		connectivity.collapseEdge(b,c);
+		connectivity.verify();
 		trace('primCollapseEdge: Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
 
 		var e = new Point2D(0.0, 2.0);
@@ -1618,6 +1619,8 @@ class GraphMain {
 
 		trace('primCollapseEdge 2 : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
 		connectivity.collapseEdge(b,c);
+		connectivity.verify();
+
 		trace('primCollapseEdge 2 : Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
 
 		var i = new Point2D(1, 2);
@@ -1629,10 +1632,9 @@ class GraphMain {
 		connectivity = PrimConnectivity2D.fromPrims([triA, q1, q2, q3]);
 		trace('primCollapseEdge 3 : Pre ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
 		connectivity.collapseEdge(b,c);
+		connectivity.verify();
+
 		trace('primCollapseEdge 3 : Post ' + connectivity.gatherFaces() + ' ' + getPrimStats(connectivity));
-
-		throw('done');
-
 	}
 
 	static function getPrimStats(connectivity:PrimConnectivity2D) {

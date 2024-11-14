@@ -393,7 +393,7 @@ class PrimConnectivity2D {
     }
     
 	public function removeFace(f:Prim2D) {
-		function removeFaceFromEdge(e:PrimEdge2D) {
+		inline function removeFaceFromEdge(e:PrimEdge2D) {
 			if (e.removeFaceFromEdge(f)) {
                 _removeEdge(e);
 			}
@@ -407,6 +407,8 @@ class PrimConnectivity2D {
 		} else {
 			removeFaceFromEdge(getEdgeFromPoints(f.c, f.a));
 		}
+
+    
 	}
 
 	public function disolveVertex(v:Point2D) {
