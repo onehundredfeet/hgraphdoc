@@ -221,7 +221,7 @@ class PrimConnectivity2D {
         addPrim(new Triangle2D(prev, splitVert, opposite));
         addPrim(new Triangle2D(splitVert, next, opposite));
     }
-    public function getSharedEdge( a : Triangle2D, b : Triangle2D) {
+    public function getSharedEdge( a : Prim2D, b : Prim2D) {
         var e0 = getEdgeFromPoints(a.a, a.b);
         if (e0.containsFace(b)) {
             return e0;
@@ -230,10 +230,22 @@ class PrimConnectivity2D {
         if (e1.containsFace(b)) {
             return e1;
         }
-        var e2 = getEdgeFromPoints(a.c, a.a);
-        if (e2.containsFace(b)) {
-            return e2;
+        if (a.isQuad()) {
+            var e2 = getEdgeFromPoints(a.c, a.d);
+            if (e2.containsFace(b)) {
+                return e2;
+            }
+            var e3 = getEdgeFromPoints(a.d, a.a);
+            if (e3.containsFace(b)) {
+                return e3;
+            }
+        } else {
+            var e2 = getEdgeFromPoints(a.c, a.a);
+            if (e2.containsFace(b)) {
+                return e2;
+            }
         }
+
         return null;
     }
 	public function addPrim(p:Prim2D) {

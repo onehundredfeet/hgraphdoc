@@ -100,7 +100,6 @@ class EarClipping {
         return triangles;
     }
     
-
     static function removeDuplicatePoints(polygon:Polygon2D):Polygon2D {
         if (polygon.length == 0) return [];
         var cleaned = [polygon[0]];
@@ -115,5 +114,4 @@ class EarClipping {
         }
         return cleaned;
     }
-
 }
