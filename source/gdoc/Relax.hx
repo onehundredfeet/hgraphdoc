@@ -154,7 +154,7 @@ class Relax {
 		var verts = [for (v in connectivity.vertIt) v];
 		var edges = [for (e in connectivity.edgeIt) e];
 		
-		trace('relaxing ${verts.length} verts and ${edges.length} edges from ${triangles.length} triangles');
+		//trace('relaxing ${verts.length} verts and ${edges.length} edges from ${triangles.length} triangles');
 
 		var edgeLengths = [for (e in edges) {
 			var dx = e.b.x - e.a.x;
@@ -166,10 +166,8 @@ class Relax {
 
 		var avergeEdgeLength = edgeLengths.fold((l, sum) -> sum + l, 0.0) / edgeLengths.length;
 		var avergeTriangleArea = triangleAreas.fold((a, sum) -> sum + a, 0.0) / triangleAreas.length;
-		//avergeEdgeLength *= 0.5;
 		var forceAccum = [for (_ in 0...verts.length) new Point2D(0.0, 0.0)];
 
-		
 		function calculateError() {
 			var squaredError = 0.0;
 			for (e in edges) {
@@ -185,7 +183,7 @@ class Relax {
 			return squaredError / edges.length;
 		}
 
-		trace('average length: $avergeEdgeLength with error ${calculateError()} and average area $avergeTriangleArea');
+//		trace('average length: $avergeEdgeLength with error ${calculateError()} and average area $avergeTriangleArea');
 
 		final RELAX_EPISLON = 1e-7;
 		for (i in 0...iterations) {
@@ -261,7 +259,7 @@ class Relax {
 		var verts = [for (v in connectivity.vertIt) v];
 		var edges = [for (e in connectivity.edgeIt) e];
 		
-		trace('relaxing ${verts.length} verts and ${edges.length} edges from ${prims.length} prims');
+		// trace('relaxing ${verts.length} verts and ${edges.length} edges from ${prims.length} prims');
 
 		var edgeLengths = [for (e in edges) {
 			var dx = e.b.x - e.a.x;
@@ -292,7 +290,7 @@ class Relax {
 			return squaredError / edges.length;
 		}
 
-		trace('average length: $avergeEdgeLength with error ${calculateError()} ');
+//		trace('average length: $avergeEdgeLength with error ${calculateError()} ');
 
 		final RELAX_EPISLON = 1e-7;
 
@@ -309,8 +307,6 @@ class Relax {
 			applyForce(a, fx, fy);
 			applyForce(b, -fx, -fy);
 		}
-
-		
 
 		function computeAndApplyForce( a : Point2D, b : Point2D, targetLength : Float, scale:Float, squareScale = 0.0) {
 			var dx = b.x - a.x;
@@ -429,7 +425,6 @@ class Relax {
 					computeAndApplyAngularForce( p.b, p.a, p.c,PI_3, 2.0);
 					computeAndApplyAngularForce( p.c, p.b, p.a,PI_3, 2.0);
 				}
-
 			}
 		
 			// average edge length for each face

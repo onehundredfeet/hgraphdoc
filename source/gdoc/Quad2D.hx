@@ -35,11 +35,6 @@ class Quad2D extends Prim2D {
 
     static inline final EPSILON = 1e-12;
 
-    public function containsPoint(p:Point2D): Bool {
-        // Divide the quad into two triangles: (a, b, c) and (a, c, d)
-        return Triangle2D.triangleContainsPoint(p, a, b, c) || Triangle2D.triangleContainsPoint(p, a, c, d);
-    }
-
 	public function toString():String {
 		return 'Quad2D(${a}, ${b}, ${c}, ${d})';
 	}
@@ -55,27 +50,6 @@ class Quad2D extends Prim2D {
         var tmp = b;
         b = d;
         d = tmp;
-    }
-
-    public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {        
-        if (containsPoint(p1) || containsPoint(p2)) {
-            return true; 
-        }
-
-        if (Line2D.segmentsIntersect(p1, p2, a, b)) {
-            return true;
-        }
-        if (Line2D.segmentsIntersect(p1, p2, b, c)) {
-            return true;
-        }
-        if (Line2D.segmentsIntersect(p1, p2, c, d)) {
-            return true;
-        }
-        if (Line2D.segmentsIntersect(p1, p2, d, a)) {
-            return true;
-        }
-
-        return false; 
     }
 
     
@@ -97,26 +71,7 @@ class Quad2D extends Prim2D {
         return false; 
     }
 
-    public function overlapsThickSegment(segStart:Point2D, segEnd:Point2D, distance:Float):Bool {
-        if (intersectsLineSegment(segStart, segEnd)) {
-            return true; 
-        }
-        // // Check if any vertex of the triangle is within the specified distance from the segment
-        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.a) <= distance) return true;
-        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.b) <= distance) return true;
-        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.c) <= distance) return true;
-        if (Line2D.segmentDistanceToPoint(segStart, segEnd, this.d) <= distance) return true;
-        
-        // Check if any endpoint of the segment lies within the specified distance from the triangle
-        // This involves checking the distance from the segment endpoints to the triangle's edges
-        // Something is wrong in here:
-        // if (Line2D.segmentDistanceToSegment(a, b, segStart, segEnd) <= distance) return true;
-        // if (Line2D.segmentDistanceToSegment(b, c, segStart, segEnd) <= distance) return true;
-        // if (Line2D.segmentDistanceToSegment(c, a, segStart, segEnd) <= distance) return true;
-        
-                
-        return false; 
-    }
+
 
     public inline function calculateCenter() {
         return new Point2D((a.x + b.x + c.x + d.x) * 0.25, (a.y + b.y + c.y + d.y) * 0.25);

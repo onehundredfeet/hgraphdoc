@@ -31,9 +31,34 @@ import gdoc.SVGWriter;
 import gdoc.Prim2D;
 import gdoc.PrimConnectivity2D;
 import gdoc.Triangle2D;
+import gdoc.MinHeap;
 
 using Lambda;
 
+class MinHeapItemExternal implements MinHeapable {
+	public function new(item:String) {
+		this.item = item;
+	}
+	public var item:String;
+
+	@:keep
+	public function toString():String {
+		return item;
+	}
+}
+
+class MinHeapItem extends AMinHeapItem {
+	public inline function new(item:String) {
+		super();
+		this.item = item;
+	}
+	public var item:String;
+
+	@:keep
+	public function toString():String {
+		return item;
+	}
+}
 class GraphMain {
 	static function main() {
 		var doc = gdoc.VisioImport.loadAsGraphDoc("data/tests.vdx");
@@ -216,6 +241,9 @@ class GraphMain {
 		primSubdivide();
 		primAngles();
 		primRelax();
+
+		minHeapBasicExternal();
+		minHeapBasicAbstract();
 	}
 
 	static var passedTests = 0;
@@ -1721,5 +1749,61 @@ class GraphMain {
 		Relax.relaxPrims(prims, [0.1, 0.5], 0.1, 10);
 		var angles2 = quad2.getInteriorAngles().map(function(a) return a * 180 / Math.PI);
 		trace('relaxed quad2 - after: ' + angles2);
+	}
+
+	public static function minHeapBasicExternal() {
+		var heap = new MinHeapExternal<MinHeapItemExternal>();
+		var a = new MinHeapItemExternal('a');
+		heap.insert(a, 100);
+		var b = new MinHeapItemExternal('b');
+		heap.insert(b, 25);
+		heap.insert(new MinHeapItemExternal('c'), 3);
+		heap.insert(new MinHeapItemExternal('d'), 4);
+		heap.insert(new MinHeapItemExternal('e'), 5);
+		heap.insert(new MinHeapItemExternal('f'), 6);
+		heap.insert(new MinHeapItemExternal('g'), 7);
+		heap.insert(new MinHeapItemExternal('h'), 8);
+		heap.insert(new MinHeapItemExternal('i'), 9);
+		var jItem = new MinHeapItemExternal('j');
+		heap.insert(jItem, 20);
+
+		trace('minHeapBasicExternal: ' + heap);
+
+		heap.decreaseKey(a, 0);
+		heap.decreaseKey(b, 1);
+		heap.decreaseKey(jItem, 10);
+
+		for (i in 0...10) {
+			var item = heap.pop();
+			trace('minHeapBasicExternal: ' + item);
+		}
+		
+	}
+
+	public static function minHeapBasicAbstract() {
+		var heap = new MinHeapAbstract<MinHeapItem>();
+		var a = new MinHeapItem('a');
+		heap.insert(a, 100);
+		var b = new MinHeapItem('b');
+		heap.insert(b, 25);
+		heap.insert(new MinHeapItem('c'), 3);
+		heap.insert(new MinHeapItem('d'), 4);
+		heap.insert(new MinHeapItem('e'), 5);
+		heap.insert(new MinHeapItem('f'), 6);
+		heap.insert(new MinHeapItem('g'), 7);
+		heap.insert(new MinHeapItem('h'), 8);
+		heap.insert(new MinHeapItem('i'), 9);
+		var jItem = new MinHeapItem('j');
+		heap.insert(jItem, 20);
+
+		trace('minHeapBasicAbstract: ' + heap);
+
+		heap.decreaseKey(a, 0);
+		heap.decreaseKey(b, 1);
+		heap.decreaseKey(jItem, 10);
+
+		trace('minHeapBasicAbstract: ' + heap);
+
+		
 	}
 }
