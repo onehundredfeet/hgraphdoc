@@ -1,5 +1,6 @@
 package test;
 
+import gdoc.PrimPathFinder2D;
 import gdoc.Quad2D;
 import gdoc.PrimConnectivity2D;
 import gdoc.Rect2D;
@@ -244,6 +245,8 @@ class GraphMain {
 
 		minHeapBasicExternal();
 		minHeapBasicAbstract();
+
+		pathFindingBasic();
 	}
 
 	static var passedTests = 0;
@@ -1805,5 +1808,31 @@ class GraphMain {
 		trace('minHeapBasicAbstract: ' + heap);
 
 		
+	}
+
+	public static function pathFindingBasic() {
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(1, 1);
+		var d = new Point2D(2, 0);
+		var e = new Point2D(2, 1);
+		var f = new Point2D(3, 0);
+		var g = new Point2D(3, 1);
+		var h = new Point2D(4, 0.5);
+		var triA = new Triangle2D(a, b, c);
+		var quadA = new Quad2D(c, b, d, e);
+		var quadB = new Quad2D(e, d, f, g);
+		var triB = new Triangle2D(g, f, h);
+		var connectivity = PrimConnectivity2D.fromPrims([triA,  quadA, triB, quadB]);
+
+		var prims = connectivity.gatherFaces();
+		trace('pathFindingBasic: ' + prims);
+		var pathFinder = PrimPathFinder2D.fromPrimConnectivity(connectivity);
+
+		var cache = pathFinder.getCache();
+
+		var path = new PrimPath();
+		trace('pathFindingBasic: ' + cache.getPath(triA, triB, path));
+		trace('pathFindingBasic: ' + path);
 	}
 }

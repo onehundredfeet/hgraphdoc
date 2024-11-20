@@ -141,6 +141,7 @@ class AMinHeapItem {
 
 @:generic
 @:access(gdoc.MinHeapAbstract)
+@:forward(length)
 abstract MinHeapAbstract<T : AMinHeapItem>(Array<T>) {
     public function new() {
         this = new Array<T>();
@@ -160,7 +161,7 @@ abstract MinHeapAbstract<T : AMinHeapItem>(Array<T>) {
         if (item.index == -1 || item.index >= this.length) {
             return false;
         }
-        
+
         return this[item.index] == item;
     }
     // Smallest item has the highest priority
@@ -249,6 +250,13 @@ abstract MinHeapAbstract<T : AMinHeapItem>(Array<T>) {
 
         this[i].index = i;
         this[j].index = j;
+    }
+
+    public function clear() {
+        for (i in 0...this.length) {
+            this[i].index = -1;
+        }
+        this.resize(0);
     }
 }
 

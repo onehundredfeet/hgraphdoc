@@ -1,6 +1,7 @@
 package gdoc;
 import gdoc.PrimConnectivity2D;
 import gdoc.Point2D;
+import gdoc.MinHeap;
 
 using Lambda;
 
@@ -18,99 +19,83 @@ class PrimPathNode2D {
         x = p.x;
         y = p.y;
     }
+
+    @:keep
+    public function toString() {
+        return 'PrimPathNode2D([${x}, ${y}] ${src})';
+    }
 }
 
-class PrimPathCache2DNode {
-    public function new( src : PrimPathNode2D, cache: PrimPathCache2D) {
+class PrimPathCache2DNode extends AMinHeapItem{
+    public function new( src : PrimPathNode2D) {
+        super();
         this.src = src;
+    }
 
-        this.a = @:privateAccess cache.getNodeFromPrim(src.a.src);
-        this.b = @:privateAccess cache.getNodeFromPrim(src.b.src);
-        this.c = @:privateAccess cache.getNodeFromPrim(src.c.src);
-        if (src.d != null)
-            this.d = @:privateAccess cache.getNodeFromPrim(src.d.src);
+    public function link(cache: PrimPathCache2D) {
+        trace('src ${src} cache ${cache} this ${this}');
+        if (src.a != null) this.a = @:privateAccess cache.getNodeFromPrim(src.a.src);
+        if (src.b != null) this.b = @:privateAccess cache.getNodeFromPrim(src.b.src);
+        if (src.c != null) this.c = @:privateAccess cache.getNodeFromPrim(src.c.src);
+        if (src.d != null) this.d = @:privateAccess cache.getNodeFromPrim(src.d.src);
+
     }
     public var src: PrimPathNode2D;
-    public var pathDistance:Float = 0.0;
+    public var pathDistance:Float = Math.POSITIVE_INFINITY;
     public var allowed:Int = 0;
     public var distanceToTarget:Float = Math.POSITIVE_INFINITY;
     public var totalScore:Float = Math.POSITIVE_INFINITY;
-    public var openIndex = -1;
     public var prev:PrimPathCache2DNode;
 
     public var a:PrimPathCache2DNode;
     public var b:PrimPathCache2DNode;
     public var c:PrimPathCache2DNode;
     public var d:PrimPathCache2DNode;
+
+    @:keep
+    public function toString() {
+        return 'PrimPathCache2DNode(${src})';
+    }
 }
 
 class PrimPath {
-    public var nodes:Array<PrimPathNode2D>;
+    public function new() {
+
+    }
+    public var nodes:Array<PrimPathNode2D> = [];
+
+    @:keep
+    public function toString() {
+        return 'PrimPath(${nodes})';
+    }
 }
 
 class PrimPathCache2D{
     public function new( finder : PrimPathFinder2D) {
         _finder = finder;
-        _cache = @:privateAccess _finder._nodes.map((n) -> new PrimPathCache2DNode(n, this));
+        _cache = @:privateAccess _finder._nodes.map((n) -> new PrimPathCache2DNode(n));
+        for (c in _cache) {
+            c.link(this);
+        }
     }
 
     public function flush() {
         // overkill, but clean
         for (c in _cache) {
-            c.pathDistance = 0.0;
+            c.pathDistance = Math.POSITIVE_INFINITY;
             c.distanceToTarget = Math.POSITIVE_INFINITY;
             c.allowed = 0;     
             c.prev = null;
-            c.openIndex = -1;
         }
-        _frontier.resize(0);
+        _frontier.clear();
     }
 
-    inline function getNodeFromPrim(prim:Prim2D):PrimPathCache2DNode {
+    function getNodeFromPrim(prim:Prim2D):PrimPathCache2DNode {
         return _cache[@:privateAccess _finder._nodeToIndex.get(prim)];
     }
 
     // order by totalScore, greatest to least
-    var _frontier:Array<PrimPathCache2DNode> = [];
-    
-    function insert( node : PrimPathCache2DNode ) {
-        var last = _frontier.length - 1;
-        var totalScore = node.totalScore;
-        
-        while (last >= 0) {
-            if (totalScore < _frontier[last].totalScore ) {
-                break;
-            }
-            last--;
-        }
-
-        
-        var current = node;
-        // bubble them up
-        for (i in (last + 1)..._frontier.length) {
-            var tmp = _frontier[i];
-            current.openIndex = i - 1;
-            _frontier[i] = current;
-            current = tmp;
-        }
-
-        current.openIndex = _frontier.length ;
-        _frontier.push(current);
-    }
-
-    function update(node : PrimPathCache2DNode) {
-        var d = node.totalScore;
-
-        for (i in (node.openIndex+1)..._frontier.length) {
-            if (d < _frontier[i].totalScore) {
-                // swap
-                var tmp = _frontier[i];
-                _frontier[i] = node;
-                _frontier[node.openIndex] = tmp;
-            }
-        }
-    }
-
+    var _frontier = new MinHeap<PrimPathCache2DNode>();
 
     public function getPath( a : Prim2D, b : Prim2D, out : PrimPath ) : Bool {
         flush();
@@ -121,42 +106,53 @@ class PrimPathCache2D{
         inline function computeDistanceToTarget( a : PrimPathCache2DNode) : Float {
             var dx = a.src.x - destNode.src.x;
             var dy = a.src.y - destNode.src.y;
+            trace('dx ${dx} dy ${dy}');
             return Math.sqrt(dx * dx + dy * dy);
         }
 
         aNode.distanceToTarget = computeDistanceToTarget(aNode);
-        insert(aNode);
+        
+        aNode.pathDistance = 0;
+        _frontier.insert(aNode, aNode.totalScore);
 
         // A-star path finding
         while (_frontier.length > 0) {
             var current = _frontier.pop();
-
+            trace('current ${current.src.src}');
             if (current == destNode) {
+                while (current != null) {
+                    out.nodes.push(current.src);
+                    current = current.prev;
+                }
+                out.nodes.reverse();
                 // Found the path
                 return true;
             }
-            current.openIndex = -1;
 
-            var minIndex = _frontier.length;
+            function checkNeighbour( neighbour : PrimPathCache2DNode ) {      
+                trace('neighbour ${neighbour}');
+                if (neighbour == null) return;
+                if (neighbour == current.prev) return;
 
-            function checkNeighbour( neighbour : PrimPathCache2DNode ) {            
                 if (neighbour.distanceToTarget == Math.POSITIVE_INFINITY) {
                     // distance to target
-                    var dx = destNode.src.x - neighbour.src.x;
-                    var dy = destNode.src.y - neighbour.src.y;
-                    neighbour.distanceToTarget = computeDistanceToTarget(destNode);
+                    neighbour.distanceToTarget = computeDistanceToTarget(neighbour);
+                    trace('distanceToTarget ${neighbour.distanceToTarget}');
                 }
                 var dx = neighbour.src.x - current.src.x;
                 var dy = neighbour.src.y - current.src.y;
                 var neighborDistance = Math.sqrt(dx * dx + dy * dy);
                 var pathDistance = current.pathDistance + neighborDistance;
+                trace('pathDistance ${pathDistance} n dist ${neighborDistance} current neighbour path distance ${neighbour.pathDistance}');
                 if (pathDistance < neighbour.pathDistance) {
                     neighbour.pathDistance = pathDistance;
                     neighbour.totalScore = neighbour.pathDistance + neighbour.distanceToTarget;
-                    if (neighbour.openIndex == -1) {
-                        insert(neighbour);
+                    neighbour.prev = current;
+                    if (_frontier.contains(neighbour)) {
+                        _frontier.decreaseKey(neighbour, neighbour.totalScore);
                     } else {
-                        update(neighbour);
+                        trace('inserting ${neighbour.src.src}');
+                        _frontier.insert(neighbour, neighbour.totalScore);
                     }
                 }
             }
@@ -164,8 +160,7 @@ class PrimPathCache2D{
             checkNeighbour( current.a);
             checkNeighbour( current.b);
             checkNeighbour( current.c);
-            if (current.d != null)
-                checkNeighbour( current.d);
+            checkNeighbour( current.d);
         }
 
         return false;
@@ -194,6 +189,13 @@ class PrimPathFinder2D {
         finder._nodes = prims.map((p) -> new PrimPathNode2D(p));
         for (i in 0...finder._nodes.length) {
             finder._nodeToIndex.set(prims[i], i);
+        }
+        for (n in finder._nodes) {
+            var neighbours = connectivity.getNeighbours(n.src);
+            if (neighbours[0] != null) n.a = finder._nodes[finder._nodeToIndex.get(neighbours[0])];
+            if (neighbours[1] != null) n.b = finder._nodes[finder._nodeToIndex.get(neighbours[1])];
+            if (neighbours[2] != null) n.c = finder._nodes[finder._nodeToIndex.get(neighbours[2])];
+            if (neighbours.length == 4 && neighbours[3] != null) n.d = finder._nodes[finder._nodeToIndex.get(neighbours[3])];
         }
         return finder;
     }
