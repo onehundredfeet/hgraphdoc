@@ -1,38 +1,38 @@
 package test;
 
-import gdoc.PrimPathFinder2D;
-import gdoc.Quad2D;
-import gdoc.PrimConnectivity2D;
-import gdoc.Rect2D;
-import gdoc.Poisson2D;
-import gdoc.PointField2D;
-import gdoc.Polygon2D;
+import grph.PrimPathFinder2D;
+import grph.Quad2D;
+import grph.PrimConnectivity2D;
+import grph.Rect2D;
+import grph.Poisson2D;
+import grph.PointField2D;
+import grph.Polygon2D;
 import haxe.Int64;
-import gdoc.FaceMesh3D.FaceMesh3DFace;
+import grph.FaceMesh3D.FaceMesh3DFace;
 import seedyrng.Seedy;
-import gdoc.Random;
-import gdoc.SVGGenerate;
-import gdoc.NodeGraph;
-import gdoc.NodeGraphReader;
-import gdoc.NodeDoc;
-import gdoc.GraphRewriter;
-import gdoc.NodeGraphPrinter;
-import gdoc.HalfEdgeMesh2D;
-import gdoc.QuickHull3D;
-import gdoc.Point3D;
-import gdoc.Point2D;
-import gdoc.PowerDiagram;
-import gdoc.WeightedPoint2D;
-import gdoc.EarClipping;
-import gdoc.Triangle2D;
-import gdoc.DelaunayTriangulator;
-import gdoc.TriangleFilter;
-import gdoc.Relax;
-import gdoc.SVGWriter;
-import gdoc.Prim2D;
-import gdoc.PrimConnectivity2D;
-import gdoc.Triangle2D;
-import gdoc.MinHeap;
+import grph.Random;
+import grph.SVGGenerate;
+import grph.NodeGraph;
+import grph.NodeGraphReader;
+import grph.NodeDoc;
+import grph.GraphRewriter;
+import grph.NodeGraphPrinter;
+import grph.HalfEdgeMesh2D;
+import grph.QuickHull3D;
+import grph.Point3D;
+import grph.Point2D;
+import grph.PowerDiagram;
+import grph.WeightedPoint2D;
+import grph.EarClipping;
+import grph.Triangle2D;
+import grph.DelaunayTriangulator;
+import grph.TriangleFilter;
+import grph.Relax;
+import grph.SVGWriter;
+import grph.Prim2D;
+import grph.PrimConnectivity2D;
+import grph.Triangle2D;
+import grph.MinHeap;
 
 using Lambda;
 
@@ -62,7 +62,7 @@ class MinHeapItem extends AMinHeapItem {
 }
 class GraphMain {
 	static function main() {
-		var doc = gdoc.VisioImport.loadAsGraphDoc("data/tests.vdx");
+		var doc = grph.VisioImport.loadAsGraphDoc("data/tests.vdx");
 
 		trace('Doc');
 		for (p in doc) {
