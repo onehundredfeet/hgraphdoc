@@ -1,4 +1,5 @@
 package grph;
+import grph.Prim2D;
 import grph.PrimConnectivity2D;
 import grph.Point2D;
 import grph.MinHeap;
@@ -33,7 +34,6 @@ class PrimPathCache2DNode extends AMinHeapItem{
     }
 
     public function link(cache: PrimPathCache2D) {
-        trace('src ${src} cache ${cache} this ${this}');
         if (src.a != null) this.a = @:privateAccess cache.getNodeFromPrim(src.a.src);
         if (src.b != null) this.b = @:privateAccess cache.getNodeFromPrim(src.b.src);
         if (src.c != null) this.c = @:privateAccess cache.getNodeFromPrim(src.c.src);
@@ -58,15 +58,12 @@ class PrimPathCache2DNode extends AMinHeapItem{
     }
 }
 
-class PrimPath {
-    public function new() {
-
-    }
-    public var nodes:Array<PrimPathNode2D> = [];
-
+@:forward
+@:forward.new
+abstract PrimPath(Array<Prim2D>) from Array<Prim2D> to Array<Prim2D> {
     @:keep
     public function toString() {
-        return 'PrimPath(${nodes})';
+        return 'PrimPath[${this.length}](${this})';
     }
 }
 
@@ -122,13 +119,13 @@ class PrimPathCache2D{
         // A-star path finding
         while (_frontier.length > 0) {
             var current = _frontier.pop();
-            trace('current ${current.src.src}');
+            //trace('current ${current.src.src}');
             if (current == destNode) {
                 while (current != null) {
-                    out.nodes.push(current.src);
+                    out.push(current.src.src);
                     current = current.prev;
                 }
-                out.nodes.reverse();
+                out.reverse();
                 // Found the path
                 return true;
             }
