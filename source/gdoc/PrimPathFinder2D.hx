@@ -84,6 +84,7 @@ class PrimPathCache2D{
         for (c in _cache) {
             c.pathDistance = Math.POSITIVE_INFINITY;
             c.distanceToTarget = Math.POSITIVE_INFINITY;
+            c.totalScore = Math.POSITIVE_INFINITY;
             c.allowed = 0;     
             c.prev = null;
         }
@@ -97,23 +98,26 @@ class PrimPathCache2D{
     // order by totalScore, greatest to least
     var _frontier = new MinHeap<PrimPathCache2DNode>();
 
-    public function getPath( a : Prim2D, b : Prim2D, out : PrimPath ) : Bool {
-        flush();
+    var _origin : Prim2D;
+    var _originNode : PrimPathCache2DNode;
 
-        var aNode = getNodeFromPrim(a);
-        var destNode = getNodeFromPrim(b);
+    public function setOrigin( p : Prim2D ) {
+        _origin = p;
+        _originNode = getNodeFromPrim(p);
+    }
+    public function getPathTo( destination : Prim2D, out : PrimPath ) : Bool {
+        var destNode = getNodeFromPrim(destination);
 
         inline function computeDistanceToTarget( a : PrimPathCache2DNode) : Float {
             var dx = a.src.x - destNode.src.x;
             var dy = a.src.y - destNode.src.y;
-            trace('dx ${dx} dy ${dy}');
             return Math.sqrt(dx * dx + dy * dy);
         }
 
-        aNode.distanceToTarget = computeDistanceToTarget(aNode);
+        _originNode.distanceToTarget = computeDistanceToTarget(_originNode);
         
-        aNode.pathDistance = 0;
-        _frontier.insert(aNode, aNode.totalScore);
+        _originNode.pathDistance = 0;
+        _frontier.insert(_originNode, _originNode.totalScore);
 
         // A-star path finding
         while (_frontier.length > 0) {
@@ -130,28 +134,27 @@ class PrimPathCache2D{
             }
 
             function checkNeighbour( neighbour : PrimPathCache2DNode ) {      
-                trace('neighbour ${neighbour}');
                 if (neighbour == null) return;
                 if (neighbour == current.prev) return;
 
                 if (neighbour.distanceToTarget == Math.POSITIVE_INFINITY) {
                     // distance to target
                     neighbour.distanceToTarget = computeDistanceToTarget(neighbour);
-                    trace('distanceToTarget ${neighbour.distanceToTarget}');
                 }
                 var dx = neighbour.src.x - current.src.x;
                 var dy = neighbour.src.y - current.src.y;
                 var neighborDistance = Math.sqrt(dx * dx + dy * dy);
                 var pathDistance = current.pathDistance + neighborDistance;
-                trace('pathDistance ${pathDistance} n dist ${neighborDistance} current neighbour path distance ${neighbour.pathDistance}');
-                if (pathDistance < neighbour.pathDistance) {
+//                trace('pathDistance ${pathDistance} n dist ${neighborDistance} current neighbour path distance ${neighbour.pathDistance}');
+                var totalDistance = pathDistance + neighbour.distanceToTarget;
+                if (totalDistance < neighbour.totalScore) {
                     neighbour.pathDistance = pathDistance;
                     neighbour.totalScore = neighbour.pathDistance + neighbour.distanceToTarget;
                     neighbour.prev = current;
                     if (_frontier.contains(neighbour)) {
                         _frontier.decreaseKey(neighbour, neighbour.totalScore);
                     } else {
-                        trace('inserting ${neighbour.src.src}');
+//                        trace('inserting ${neighbour.src.src}');
                         _frontier.insert(neighbour, neighbour.totalScore);
                     }
                 }
@@ -164,6 +167,13 @@ class PrimPathCache2D{
         }
 
         return false;
+    }
+    public function getPath( a : Prim2D, b : Prim2D, out : PrimPath ) : Bool {
+        flush();
+
+        setOrigin(a);
+        
+        return getPathTo(b, out);
     }
 
     var _finder:PrimPathFinder2D;
