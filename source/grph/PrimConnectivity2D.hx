@@ -335,6 +335,29 @@ class PrimConnectivity2D {
 		return result;
 	}
 
+	public function getAllOtherPrims(prims:Array<Prim2D>):Array<Prim2D> {
+		var faces = new Map<Prim2D, Bool>();
+
+		for (p in prims) {
+			faces.set(p, false);
+		}
+		for (edge in _edgeMap) {
+			if (edge.faceA != null && !faces.exists(edge.faceA)) {
+				faces.set(edge.faceA, true);
+			}
+			if (edge.faceB != null && !faces.exists(edge.faceB)) {
+				faces.set(edge.faceB, true);
+			}
+		}
+		var results = [];
+		for (f in faces.keys()) {
+			if (faces.get(f)) {
+				results.push(f);
+			}
+		}
+		return results;
+	}
+
 	public static function fromPrims(prims:Array<Prim2D>):PrimConnectivity2D {
 		var connectivity = new PrimConnectivity2D();
 		for (p in prims) {
