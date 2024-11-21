@@ -2,11 +2,11 @@ package grph;
 
 import grph.Random;
 import hvector.Float2;
+import grph.Rect2D;
 
+@:forward
+@:forward.new
 abstract Random2D(Random) {
-    public inline function new() {
-        this = new Random();
-    }
     public inline function point2() : Float2 {
         return new Float2(this.random(), this.random());
     }
@@ -39,6 +39,9 @@ abstract Random2D(Random) {
         var r = Math.sqrt(rSquared);
 
         return new Float2(r * Math.cos(theta), r * Math.sin(theta));
+    }
+    public function inRect(rect:Rect2D): Float2 {
+        return new Float2(this.range(rect.xmin, rect.xmax), this.range(rect.ymin, rect.ymax));
     }
 }
  

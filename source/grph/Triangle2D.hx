@@ -33,6 +33,13 @@ class Triangle2D extends Prim2D {
 		return ((b1 == b2) && (b2 == b3));
 	}
 
+    public static function triangleCCWContainsXY( x : Float, y : Float, a : Point2D, b : Point2D, c : Point2D):Bool {
+        var b1 = Point2D.orientationXY(a, b, x, y) < 0.0;
+        var b2 = Point2D.orientationXY(b, c, x, y) < 0.0;
+        var b3 = Point2D.orientationXY(c, a, x, y) < 0.0;
+        return ((b1 == b2) && (b2 == b3));
+    }
+
     static inline final EPSILON = 1e-12;
 
     public function isDegenerate():Bool {

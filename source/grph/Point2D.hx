@@ -88,6 +88,11 @@ class Point2D {
                (p2.y - p1.y) * (p3.x - p1.x);
     }
 
+    public static inline function orientationXY(p1:Point2D, p2:Point2D, x: Float, y : Float):Float {
+        return (p2.x - p1.x) * (y - p1.y) - 
+               (p2.y - p1.y) * (x - p1.x);
+    }
+
     public function eqval( p:Point2D, epsilon:Float = 1e-12):Bool {
         return Math.abs(this.x - p.x) < epsilon && Math.abs(this.y - p.y) < epsilon;
     }

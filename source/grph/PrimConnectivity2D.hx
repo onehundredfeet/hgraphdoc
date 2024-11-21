@@ -307,6 +307,34 @@ class PrimConnectivity2D {
 		return null;
 	}
 
+	public function getArrayNeighbours(prims:Array<Prim2D>, inclusive = false):Array<Prim2D> {
+		var neighbours = new Map<Prim2D, Bool>();
+
+		for (p in prims) {
+			neighbours.set(p, inclusive);
+		}
+
+		for (p in prims) {
+			var n = getNeighbours(p);
+			for (ni in n) {
+				if (ni != null ) {
+					if (!neighbours.exists(ni)) {
+						neighbours.set(ni, true);
+					} 					
+				}
+			}
+		}
+
+		var result = [];
+		for (n in neighbours.keys()) {
+			if (neighbours.get(n)) {
+				result.push(n);
+			}
+		}
+
+		return result;
+	}
+
 	public static function fromPrims(prims:Array<Prim2D>):PrimConnectivity2D {
 		var connectivity = new PrimConnectivity2D();
 		for (p in prims) {

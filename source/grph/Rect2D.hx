@@ -135,6 +135,22 @@ class Rect2D {
         }
     }
 
+    public function expandToIncludePrim(p : Prim2D) {
+        this.expandToInclude(p.a);
+        this.expandToInclude(p.b);
+        this.expandToInclude(p.c);
+        if (p.d == null) this.expandToInclude(p.d);
+    }
+    public function expandToIncludePrims(prims:Array<Prim2D>):Void {
+        for (p in prims) {
+            expandToIncludePrim(p);
+        }
+    }
+    public static function fromPrims( prims:Array<Prim2D> ) {
+        var rect = infiniteEmpty();
+        rect.expandToIncludePrims(prims);
+        return rect;
+    }
     public function scale( scale:Float ):Void {
         var dx = this.width;
         var dy = this.height;
@@ -147,7 +163,19 @@ class Rect2D {
         this.xmax = cx + dx * scale / 2;
         this.ymax = cy + dy * scale / 2;
     }
+    public function expandBy( amount : Float ) {
+        this.xmin -= amount;
+        this.ymin -= amount;
+        this.xmax += amount;
+        this.ymax += amount;
+    }
 
+    public function reset() {
+        this.xmin = Math.POSITIVE_INFINITY;
+        this.ymin = Math.POSITIVE_INFINITY;
+        this.xmax = Math.NEGATIVE_INFINITY;
+        this.ymax = Math.NEGATIVE_INFINITY;
+    }
     public static function infiniteEmpty() : Rect2D {
         return new Rect2D( Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY );
     }
@@ -177,5 +205,13 @@ class Rect2D {
         }
 
         return points;
+    }
+
+    public function containsXY( x:Float, y:Float ) : Bool {
+        return x >= this.xmin && x <= this.xmax && y >= this.ymin && y <= this.ymax;
+    }
+    @:keep
+    public function toString() {
+        return 'Rect2D([${xmin}, ${ymin}] [${xmax}, ${ymax}])';
     }
 }

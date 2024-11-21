@@ -18,6 +18,9 @@ abstract Random(seedyrng.Random) {
     public inline function random2Pi() : Float {
         return this.random() * (Math.PI * 2.);
     }
+    public inline function range(min:Float, max:Float) : Float {
+        return this.uniform(min, max);
+    }
 }
 #else
 class Random {
@@ -44,6 +47,9 @@ class Random {
     }
     public inline function random2Pi() : Float {
         return this.random() * (Math.PI * 2.);
+    }
+    public inline function range(min:Float, max:Float) : Float {
+        return this.random() * (max - min) + min;
     }
 }
 #end

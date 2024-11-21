@@ -173,6 +173,9 @@ class Prim2D {
         return false;
     }
 
+    static inline final EPSILON = 1e-6;
+    static inline final ONE_PLUS_EPSILON = 1 + EPSILON;
+
     public function containsXY(x : Float, y : Float): Bool {
         if (d == null) {
             var x1 = this.a.x;
@@ -190,7 +193,9 @@ class Prim2D {
             var b = ((y3 - y1)*(x - x3) + (x1 - x3)*(y - y3)) / denom;
             var c = 1 - a - b;
             
-            return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+            return a >= -EPSILON && a <= ONE_PLUS_EPSILON && b >= -EPSILON && b <= ONE_PLUS_EPSILON && c >= -EPSILON && c <= ONE_PLUS_EPSILON;
+        } else {
+            return Triangle2D.triangleCCWContainsXY(x, y, a, b, c) || Triangle2D.triangleCCWContainsXY(x, y, a, c, d);
         }
 
         return false;
