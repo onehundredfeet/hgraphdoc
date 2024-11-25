@@ -263,6 +263,14 @@ class GLTFWriter {
         m.name = "Default";
         return m;
     }
+    public function addPBRMaterial( name : String, baseColorFactor : Array<Float>, metallicFactor : Float = 0., roughnessFactor : Float = 0.5) {
+        var m = addMaterial();
+        m.name = name;
+        m.baseColorFactor = baseColorFactor;
+        m.metallicFactor = metallicFactor;
+        m.roughnessFactor = roughnessFactor;
+        return m;
+    }
 
     public function addTriMeshesAsClusters(triMeshes:Array<{mesh: IndexedAttributeTriMesh, material:GLTFMaterial}>, name:String) {
 
