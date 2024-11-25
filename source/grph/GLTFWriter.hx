@@ -61,8 +61,15 @@ class GLTFMesh  extends GLTFElement{
     }
 }
 
+ enum abstract GLTFAlphaMode(String) from String to String {
+    var AM_OPAQUE = "OPAQUE";
+    var AM_MASK = "MASK";
+    var AM_BLEND = "BLEND";
+}
+
 class GLTFMaterial  extends GLTFElement{
     public var doubleSided : Bool = true;
+    public var blendMode : GLTFAlphaMode = GLTFAlphaMode.AM_OPAQUE;
     public var name : String = "";
     public var kind = "pbrMetallicRoughness";
     public var baseColorFactor : Array<Float> = [1., 1., 1., 1.];
@@ -272,7 +279,7 @@ class GLTFWriter {
         
             var posMin = [Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY];
             var posMax = [Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY];
-            var posCount = totalVerts;
+            var posCount = triMesh.getVertCount();
             var positions = triMesh.getVertexAttributesF(AttributeSemantic.POSITION);
 
             for (i in 0...posCount) {
@@ -297,11 +304,9 @@ class GLTFWriter {
             posBufferView.byteOffset = block.start;
 
             if (posBufferView.byteLength != posCount * 3 * 4) {
-                throw "Invalid buffer length";
+                throw 'Invalid buffer length [${block}] -> ${posBufferView.byteLength} != ${posCount} * 3 * 4 = ${posCount * 3 * 4}';
             }
-            if (posBufferView.byteOffset != 0) {
-                throw "Invalid buffer offset";
-            }
+
             var indexBufferView = addBufferView(BT_ELEMENT_ARRAY_BUFFER, buffer);
             bufferBuilder.beginBlock();
             bufferBuilder.writeInt32s(triMesh.indices);
@@ -330,7 +335,6 @@ class GLTFWriter {
             prim.attributes.push(attr);
             prim.indices = indexAccessor;
             mesh.primitives.push(prim);
-        
         }
         buffer.data = bufferBuilder.finishAndGetBytes();
 
@@ -427,6 +431,7 @@ class GLTFWriter {
             addLine('{');
             push();
             addLine('"doubleSided":${m.doubleSided},');
+            addLine('"alphaMode":"${m.blendMode}",');
             addLine('"name":"${m.name}",');
             addLine('"${m.kind}":{');
             push();
