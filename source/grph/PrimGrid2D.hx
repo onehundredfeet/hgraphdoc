@@ -21,7 +21,7 @@ abstract PrimGridCellKey( Int64 ) from Int64 to Int64 {
 
 @:forward
 @:forward.new
-abstract PrimGridCell(Array<Prim2D>) {
+abstract PrimGridCell(Array<Prim2D>) to Array<Prim2D>{
 }
 
 
@@ -87,11 +87,15 @@ class PrimGrid2D {
     public inline function getOrCreateCellFromPoint( p : Point2D ) : PrimGridCell {
         return getOrCreateCellFromKey(getPointCellKey( p ) );
     }
-    public function walkCellsNear( p : Point2D, r : Float, fn : (PrimGridCell) -> Bool) {
-        var minX = getCellX(p.x - r);
-        var minY = getCellY(p.y - r);
-        var maxX = getCellX(p.x + r) + 1;
-        var maxY = getCellY(p.y + r) + 1;
+    public inline function walkCellsNear( p : Point2D, r : Float, fn : (PrimGridCell) -> Bool) {
+        return walkCellsNearXY( p.x, p.y, r, fn );
+    }
+
+    public function walkCellsNearXY( x : Float, y : Float, r : Float, fn : (PrimGridCell) -> Bool) {
+        var minX = getCellX(x - r);
+        var minY = getCellY(y - r);
+        var maxX = getCellX(x + r) + 1;
+        var maxY = getCellY(y + r) + 1;
 
         for (x in minX...maxX) {
             for (y in minY...maxY) {
@@ -121,6 +125,25 @@ class PrimGrid2D {
         }
         return null;
     }
+    public function getPrimNearestXY( x : Float, y : Float, r : Float ) : Prim2D {
+        var exact = getPrimAtXY( x, y );
+        if (exact != null) return exact;
+
+        var bestDist2 = r * r;
+        var bestPrim = null;
+        walkCellsNearXY( x, y, r, function(primCell) {
+            for (p in primCell) {
+                var d2 = p.distanceSquaredToNearestVertXY(x, y);
+                if (d2 < bestDist2) {
+                    bestDist2 = d2;
+                    bestPrim = p;
+                }
+            }
+            return true;
+        });
+        return bestPrim;
+    }
+
     public function getPrimAt( p : Point2D ) : Prim2D {
         var c = getCellFromPoint( p );
         if (c == null) return null;

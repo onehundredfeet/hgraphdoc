@@ -1,5 +1,7 @@
 package test;
 
+import grph.IndexedAttributeTriMesh;
+import grph.GLTFWriter;
 import grph.PrimPathFinder2D;
 import grph.Quad2D;
 import grph.PrimConnectivity2D;
@@ -247,6 +249,8 @@ class GraphMain {
 		minHeapBasicAbstract();
 
 		pathFindingBasic();
+
+		gltfBasic();
 	}
 
 	static var passedTests = 0;
@@ -1834,5 +1838,26 @@ class GraphMain {
 		var path = new PrimPath();
 		trace('pathFindingBasic: ' + cache.getPath(triA, triB, path));
 		trace('pathFindingBasic: ' + path);
+	}
+
+	public static function gltfBasic() {
+		var writer = new GLTFWriter();
+
+		var a = new Point2D(0, 0);
+		var b = new Point2D(1, 0);
+		var c = new Point2D(1, 1);
+		var d = new Point2D(2, 0);
+		var e = new Point2D(2, 1);
+		var f = new Point2D(3, 0);
+		var g = new Point2D(3, 1);
+		var h = new Point2D(4, 0.5);
+		var triA = new Triangle2D(a, b, c);
+		var triB = new Triangle2D(g, f, h);
+
+		var tris : Array<Triangle2D> = [triA];
+		var mesh = IndexedAttributeTriMesh.fromTriangles2D(tris);
+		var mat =	writer.addDefaultMaterial();
+		writer.addTriMesh(mesh, mat);
+		writer.finishAndWrite('test.gltf');
 	}
 }

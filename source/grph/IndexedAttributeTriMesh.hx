@@ -102,6 +102,13 @@ class IndexedAttributeTriMeshF {
 		attributes[semantic][offset + 2] = value.z;
 	}
 
+	public inline function setVertexAttributeFXYZ(semantic:AttributeSemantic, index:Int, x:Float, y:Float, z:Float) {
+		final offset = ATTRIBUTE_DIMS[semantic] * index;
+		attributes[semantic][offset] = x;
+		attributes[semantic][offset + 1] = y;
+		attributes[semantic][offset + 2] = z;
+	}
+
 	public inline function setVertexAttributeF4(semantic:AttributeSemantic, index:Int, value:Float4) {
 		final offset = ATTRIBUTE_DIMS[semantic] * index;
 		attributes[semantic][offset] = value.x;
@@ -171,6 +178,38 @@ class IndexedAttributeTriMeshF {
 	}
 	public inline function getTriCount() : Int {
 		return Std.int( indices.length / 3);
+	}
+
+	public static function fromTriangles2D( triangles : Array<Triangle2D> ) {
+		var mesh = new IndexedAttributeTriMesh();
+		// remove duplicates
+		var posMap = new Map<Point2D, Int>();
+		var posIndex = 0;
+
+		for (t in triangles) {
+			if (!posMap.exists(t.a)) posMap.set(t.a, posIndex++);
+			if (!posMap.exists(t.b)) posMap.set(t.b, posIndex++);
+			if (!posMap.exists(t.c)) posMap.set(t.c, posIndex++);
+		}
+
+		var posArray = [];
+		for (kv in posMap.keyValueIterator()) {
+			posArray[kv.value] = kv.key;
+		}
+		mesh.addAttribute(AttributeSemantic.POSITION);
+		mesh.reserveVerts(posArray.length);
+
+		for (i in 0...posArray.length) {
+			var p = posArray[i];
+			mesh.setVertexAttributeFXYZ(AttributeSemantic.POSITION, i, p.x, p.y, 0);
+		}
+
+		mesh.reserveTris(triangles.length);
+
+		for (t in triangles) {
+			mesh.addTriangle(posMap.get(t.a), posMap.get(t.b), posMap.get(t.c));
+		}
+		return mesh;
 	}
 }
 

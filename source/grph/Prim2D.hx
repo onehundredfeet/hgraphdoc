@@ -228,6 +228,16 @@ class Prim2D {
         return false; 
     }
 
+    public function distanceSquaredToNearestVertXY( x : Float, y : Float) {
+        var a = this.a.distanceSquaredToXY(x, y);
+        var b = this.b.distanceSquaredToXY(x, y);
+        var c = this.c.distanceSquaredToXY(x, y);
+        var d = this.d != null ? this.d.distanceSquaredToXY(x, y) : Math.POSITIVE_INFINITY;
+        var ab = a < b ? a : b;
+        var cd = c < d ? c : d;
+        return ab < cd ? ab : cd;
+    }
+
     public function intersectsLineSegment(p1:Point2D, p2:Point2D):Bool {        
         if (containsPoint(p1) || containsPoint(p2)) {
             return true; 
@@ -253,5 +263,9 @@ class Prim2D {
         }
                 
         return false; 
+    }
+
+    public inline function getVertices() : Array<Point2D> {
+        return d != null ? [a, b, c, d] : [a, b, c];
     }
 }

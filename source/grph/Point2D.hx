@@ -10,11 +10,20 @@ class Point2D {
         this.y = y;
     }
 
+    #if hvector
+    public inline function toFloat2():hvector.Float2 {
+        return new hvector.Float2(this.x, this.y);
+    }
+    public inline function toFloat3():hvector.Float3 {
+        return new hvector.Float3(this.x, this.y, 0.0);
+    }
+    #end
+
     public inline function dot(v:Point2D):Float {
-        return x * v.x + y * v.y;
+        return this.x * v.x + this.y * v.y;
     }
     public function toString():String {
-        return 'Point2D(' + x + ', ' + y  + ')';
+        return 'Point2D(' + this.x + ', ' + this.y  + ')';
     }
     public function normalize(): Void {
         var length = Math.sqrt(this.x * this.x + this.y * this.y);
@@ -66,15 +75,20 @@ class Point2D {
         return angle;
     }
 
-    public function distanceTo(p:Point2D):Float {
+    public inline function distanceTo(p:Point2D):Float {
         var dx = this.x - p.x;
         var dy = this.y - p.y;
         return Math.sqrt(dx * dx + dy * dy);
     }
-    public function distanceToXY(x:Float, y:Float):Float {
+    public inline function distanceToXY(x:Float, y:Float):Float {
         var dx = this.x - x;
         var dy = this.y - y;
         return Math.sqrt(dx * dx + dy * dy);
+    }
+    public inline function distanceSquaredToXY(x:Float, y:Float):Float {
+        var dx = this.x - x;
+        var dy = this.y - y;
+        return dx * dx + dy * dy;
     }
     public static function pointDistanceToXY(ax:Float, ay:Float, bx : Float, by: Float):Float {
         var dx = ax - bx;
@@ -122,8 +136,8 @@ class Point2D {
         var prime2:Int = 54323;
         
         // Scale and round coordinates to handle floating-point precision
-        var aX:Int = Math.round(x * HASH_PRECISION);
-        var aY:Int = Math.round(y * HASH_PRECISION);
+        var aX:Int = Math.round(this.x * HASH_PRECISION);
+        var aY:Int = Math.round(this.y * HASH_PRECISION);
         
         // Compute individual hashes for both points using the same primes
         var hashA:Int = (aX * prime1 + aY * prime2) % MODULUS;
