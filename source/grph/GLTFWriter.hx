@@ -4,6 +4,7 @@ import haxe.io.BytesOutput;
 import hl.Bytes;
 import sys.io.File;
 import grph.IndexedAttributeTriMesh;
+using Lambda;
 
 class GLTFElement {
     public var index: Int;
@@ -256,93 +257,90 @@ class GLTFWriter {
         return m;
     }
 
-    public function addTriMeshesAsClusters(triMeshes:Array<IndexedAttributeTriMesh>) {
-        throw "Not implemented";
-    }
+    public function addTriMeshesAsClusters(triMeshes:Array<{mesh: IndexedAttributeTriMesh, material:GLTFMaterial}>, name:String) {
 
-    public function addTriMesh(triMesh:IndexedAttributeTriMesh, material: GLTFMaterial, name:String = null) {
-        // tally data
-        var posMin = [Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY];
-        var posMax = [Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY];
-        var posCount = triMesh.getVertCount();
-        var positions = triMesh.getVertexAttributesF(AttributeSemantic.POSITION);
-
-        for (i in 0...posCount) {
-            var x = positions[i * 3 + 0];
-            var y = positions[i * 3 + 1];
-            var z = positions[i * 3 + 2];
-
-            if (x < posMin[0]) posMin[0] = x;
-            if (y < posMin[1]) posMin[1] = y;
-            if (z < posMin[2]) posMin[2] = z;
-            if (x > posMax[0]) posMax[0] = x;
-            if (y > posMax[1]) posMax[1] = y;
-            if (z > posMax[2]) posMax[2] = z;
-        }
 
         var mesh = addMesh();
         var buffer = addBuffer();
-
-
         var bufferBuilder = new GLTFBufferBuilder();
-        var posBufferView = addBufferView(BT_ARRAY_BUFFER, buffer);
-        bufferBuilder.beginBlock();
-        bufferBuilder.writeFloatAsSingles(positions);
-        var block = bufferBuilder.endBlock();
 
-        posBufferView.byteLength = block.end - block.start;
-        posBufferView.byteOffset = block.start;
+        var totalVerts = triMeshes.fold((v, accum) -> accum + v.mesh.getVertCount(), 0);
 
-        if (posBufferView.byteLength != posCount * 3 * 4) {
-            throw "Invalid buffer length";
-        }
-        if (posBufferView.byteOffset != 0) {
-            throw "Invalid buffer offset";
-        }
-        var indexBufferView = addBufferView(BT_ELEMENT_ARRAY_BUFFER, buffer);
-        bufferBuilder.beginBlock();
-        bufferBuilder.writeInt32s(triMesh.indices);
-        block = bufferBuilder.endBlock();
-        indexBufferView.byteLength = block.end - block.start;
-        indexBufferView.byteOffset = block.start;
-
-        var posAccessor = addAccessor(posBufferView);
-        posAccessor.max = posMax;
-        posAccessor.min = posMin;
-        posAccessor.componentType = GLTFComponentType.CT_FLOAT;
-        posAccessor.count = triMesh.getVertCount(); //?
-        posAccessor.type = GLTFAccessorType.AT_VEC3;
-
-        var indexAccessor = addAccessor(indexBufferView);
-        indexAccessor.componentType = GLTFComponentType.CT_UNSIGNED_INT;
-        indexAccessor.count = triMesh.indices.length;
-        indexAccessor.type = GLTFAccessorType.AT_SCALAR;
-
-        var attr = new GLTFMeshAttribute();
-        attr.accessor = posAccessor;
-        attr.semantic = "POSITION";
-
-        var prim = new GLTFMeshPrimitives();
-        prim.material = material;
-        prim.attributes.push(attr);
-        prim.indices = indexAccessor;
-        mesh.primitives.push(prim);
+        // tally data
+        for (triMeshTouple in triMeshes) {
+            var triMesh = triMeshTouple.mesh;
         
+            var posMin = [Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY,Math.POSITIVE_INFINITY];
+            var posMax = [Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY,Math.NEGATIVE_INFINITY];
+            var posCount = totalVerts;
+            var positions = triMesh.getVertexAttributesF(AttributeSemantic.POSITION);
 
-        // indices
+            for (i in 0...posCount) {
+                var x = positions[i * 3 + 0];
+                var y = positions[i * 3 + 1];
+                var z = positions[i * 3 + 2];
+
+                if (x < posMin[0]) posMin[0] = x;
+                if (y < posMin[1]) posMin[1] = y;
+                if (z < posMin[2]) posMin[2] = z;
+                if (x > posMax[0]) posMax[0] = x;
+                if (y > posMax[1]) posMax[1] = y;
+                if (z > posMax[2]) posMax[2] = z;
+            }
+
+            var posBufferView = addBufferView(BT_ARRAY_BUFFER, buffer);
+            bufferBuilder.beginBlock();
+            bufferBuilder.writeFloatAsSingles(positions);
+            var block = bufferBuilder.endBlock();
+
+            posBufferView.byteLength = block.end - block.start;
+            posBufferView.byteOffset = block.start;
+
+            if (posBufferView.byteLength != posCount * 3 * 4) {
+                throw "Invalid buffer length";
+            }
+            if (posBufferView.byteOffset != 0) {
+                throw "Invalid buffer offset";
+            }
+            var indexBufferView = addBufferView(BT_ELEMENT_ARRAY_BUFFER, buffer);
+            bufferBuilder.beginBlock();
+            bufferBuilder.writeInt32s(triMesh.indices);
+            block = bufferBuilder.endBlock();
+            indexBufferView.byteLength = block.end - block.start;
+            indexBufferView.byteOffset = block.start;
+
+            var posAccessor = addAccessor(posBufferView);
+            posAccessor.max = posMax;
+            posAccessor.min = posMin;
+            posAccessor.componentType = GLTFComponentType.CT_FLOAT;
+            posAccessor.count = triMesh.getVertCount(); //?
+            posAccessor.type = GLTFAccessorType.AT_VEC3;
+
+            var indexAccessor = addAccessor(indexBufferView);
+            indexAccessor.componentType = GLTFComponentType.CT_UNSIGNED_INT;
+            indexAccessor.count = triMesh.indices.length;
+            indexAccessor.type = GLTFAccessorType.AT_SCALAR;
+
+            var attr = new GLTFMeshAttribute();
+            attr.accessor = posAccessor;
+            attr.semantic = "POSITION";
+
+            var prim = new GLTFMeshPrimitives();
+            prim.material = triMeshTouple.material;
+            prim.attributes.push(attr);
+            prim.indices = indexAccessor;
+            mesh.primitives.push(prim);
+        
+        }
         buffer.data = bufferBuilder.finishAndGetBytes();
-
-        // .map(function(v) {
-        //     bufferView.byteLength = triMesh.getVertexCount() * 3 * 4;
-        //     bufferView.byteOffset = buffer.buffer.length;
-        //     buffer.buffer.writeFloats(triMesh.getVertexAttributesF(AttributeSemantic.POSITION));
-        //     mesh.primitives[0].attributes.push(attr);
-        // });
 
         var node = addNode();
         node.mesh = mesh;
         node.name = name;
-        
+    }
+
+    public function addTriMesh(triMesh:IndexedAttributeTriMesh, material: GLTFMaterial, name:String = null) {
+        addTriMeshesAsClusters([{mesh: triMesh, material: material}], name);
     }
     public function finishAndWrite(path:String) {
         var buffer = new StringBuf();
