@@ -28,7 +28,7 @@ class Prim2D {
             case 1: b;
             case 2: c;
             case 3: d;
-            default: throw "Invalid index";
+            default: throw 'Invalid index ${idx}';
         }
     }
     public inline function getPointSafe(idx:Int) : Point2D {

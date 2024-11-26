@@ -139,7 +139,7 @@ class Rect2D {
         this.expandToInclude(p.a);
         this.expandToInclude(p.b);
         this.expandToInclude(p.c);
-        if (p.d == null) this.expandToInclude(p.d);
+        if (p.d != null) this.expandToInclude(p.d);
     }
     public function expandToIncludePrims(prims:Array<Prim2D>):Void {
         for (p in prims) {

@@ -139,6 +139,10 @@ class PrimConnectivity2D {
 	var _edgeMap = new EdgeKeyMapType();
 	var _vertEdges = new Map<Point2D, Array<PrimEdge2D>>();
 
+	public var vertIDRange(get, never):Int;
+	inline function get_vertIDRange() {
+		return _pointCount;
+	}
 	public var vertIt(get, never):Iterator<Point2D>;
 
 	inline function get_vertIt() {
@@ -798,13 +802,19 @@ class PrimConnectivity2D {
 
         for (e in edgeIt) {
             if (e.faceA == null && e.faceB == null)  return doReturn('Edge has no faces ${e}');
+			if (_vertEdges.get(e.a) == null) return doReturn('Edge has vertex with no edges ${e}');
+			if (_vertEdges.get(e.b) == null) return doReturn('Edge has vertex with no edges ${e}');
+			if (!_pointToID.exists(e.a)) return doReturn('Edge a has vertex with no ID ${e}');
+			if (!_pointToID.exists(e.b)) return doReturn('Edge b has vertex with no ID ${e}');
             if (e.faceA != null && !e.faceA.containsEdge(e.a, e.b)) return doReturn('Face A does not contain edge ${e.faceA} ${e}');
             if (e.faceB != null && !e.faceB.containsEdge(e.a, e.b)) return doReturn('Face B does not contain edge ${e.faceB} ${e}');
             if (e.faceA == e.faceB) return doReturn('Edge has same face twice ${e}');
             if (e.faceA != null) {
                 for (i in 0...e.faceA.getVertCount()) {
                     var v = e.faceA.getPoint(i);
+					if (v == null) return doReturn('Face A has null vertex ${e.faceA}');
                     if (_vertEdges.get(v) == null) return doReturn('Face A has vertex with no edges ${e.faceA}');
+					if (!_pointToID.exists(v)) return doReturn('Face A has vertex ${v} with no ID ${e.faceA}');
                     usedPoints.set(v, true);
                 }
                 if (!e.faceA.isCCW()) return doReturn('Face A is not CCW ${e.faceA}');
@@ -812,7 +822,9 @@ class PrimConnectivity2D {
             if (e.faceB != null) {
                 for (i in 0...e.faceB.getVertCount()) {
                     var v = e.faceB.getPoint(i);
+					if (v == null) return doReturn('Face B has null vertex ${e.faceB}');
                     if (_vertEdges.get(v) == null) return doReturn('Face B has vertex with no edges ${e.faceB}');
+					if (!_pointToID.exists(v)) return doReturn('Face B has vertex ${v} with no ID ${e.faceB}');
                     usedPoints.set(v, true);
                 }
                 if (!e.faceB.isCCW()) return doReturn('Face B is not CCW ${e.faceB}');

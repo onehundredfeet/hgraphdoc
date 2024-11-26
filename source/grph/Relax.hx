@@ -272,8 +272,7 @@ class Relax {
 		var averageEdgeLengthRoot2 = avergeEdgeLength * Math.sqrt(2.0);
 
 		//avergeEdgeLength *= 0.5;
-		var forceAccum = [for (_ in 0...verts.length) new Point2D(0.0, 0.0)];
-
+		var forceAccum = [for (_ in 0...connectivity.vertIDRange) new Point2D(0.0, 0.0)];
 		
 		function calculateError() {
 			var squaredError = 0.0;
@@ -379,9 +378,15 @@ class Relax {
 		final PI_3 = Math.PI / 5;
 		final LOCAL_QUAD_EDGE_STRENGTH = 0.25 * 3;
 		final LOCAL_TRI_EDGE_STRENGTH = (1.0 / 3.0) * 3;
+
+		final LOCAL_QUAD_EDGE_CROSS_STRENGTH = 0.5;
+		final LOCAL_QUAD_EDGE_CROSS_STRENGTH_2 = 0.25;
+
+		final GLOBAL_EDGE_STRENGTH = 1.0;
+		final GLOBAL_EDGE_STRENGTH_2 = 1.0;
 		for (i in 0...iterations) {
 			for (e in edges) {
-				computeAndApplyForce(e.a, e.b, avergeEdgeLength, 0.75);
+				computeAndApplyForce(e.a, e.b, avergeEdgeLength, GLOBAL_EDGE_STRENGTH, GLOBAL_EDGE_STRENGTH_2);
 			}
 
 			for (p in prims) {
@@ -401,8 +406,8 @@ class Relax {
 					computeAndApplyForce(p.c, p.d, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
 					computeAndApplyForce(p.d, p.a, averageLocalLength, LOCAL_QUAD_EDGE_STRENGTH, LOCAL_QUAD_EDGE_STRENGTH);
 
-					computeAndApplyForce(p.a, p.c, averageEdgeLengthRoot2, 0.5);
-					computeAndApplyForce(p.b, p.d, averageEdgeLengthRoot2, 0.5);
+					computeAndApplyForce(p.a, p.c, averageEdgeLengthRoot2, LOCAL_QUAD_EDGE_CROSS_STRENGTH, LOCAL_QUAD_EDGE_CROSS_STRENGTH_2);
+					computeAndApplyForce(p.b, p.d, averageEdgeLengthRoot2, LOCAL_QUAD_EDGE_CROSS_STRENGTH, LOCAL_QUAD_EDGE_CROSS_STRENGTH_2);
 
 					computeAndApplyAngularForce( p.a, p.d, p.b,Math.PI * 0.5, 1.0);
 					computeAndApplyAngularForce( p.b, p.a, p.c,Math.PI * 0.5, 1.0);
